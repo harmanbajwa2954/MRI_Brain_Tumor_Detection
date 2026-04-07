@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h2>Upload MRI Scan</h2>
+            </div>
+            <div class="card-body text-center">
+                <form action="/predict" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input class="form-control" type="file" id="formFile" name="file" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Analyze Scan</button>
+                </form>
+
+                {% if result %}
+                <hr class="my-4">
+                <div class="alert alert-info">
+                    <h4>Prediction: <strong>{{ result }}</strong></h4>
+                    <p>Confidence: {{ "%.2f"|format(confidence) }}%</p>
+                </div>
+                <img src="{{ user_image }}" alt="Uploaded MRI" class="img-fluid rounded mt-3" style="max-height: 300px;">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

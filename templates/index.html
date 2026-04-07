@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3 text-center">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold">Automated Brain Tumor Detection</h1>
+        <p class="col-md-8 mx-auto fs-4">Upload an MRI scan and let our deep learning model assist in rapidly identifying tumor classifications with high accuracy.</p>
+        <a href="/predict" class="btn btn-primary btn-lg mt-3">Try the Model Now</a>
+    </div>
+</div>
+
+<div class="row text-center mt-5">
+    <div class="col-md-4">
+        <h3>Advanced Architecture</h3>
+        <p>Built utilizing transfer learning on the robust VGG16 network, fine-tuned specifically for medical imaging analysis.</p>
+    </div>
+    <div class="col-md-4">
+        <h3>Fast Inference</h3>
+        <p>Optimized backend ensures that you receive diagnostic predictions and confidence scores in seconds.</p>
+    </div>
+    <div class="col-md-4">
+        <h3>Secure & Private</h3>
+        <p>Uploaded images are processed securely and are not permanently stored, ensuring patient data privacy.</p>
+    </div>
+</div>
+{% endblock %}
