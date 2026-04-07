@@ -1,26 +1,93 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="p-5 mb-4 bg-light rounded-3 text-center">
-    <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold">Automated Brain Tumor Detection</h1>
-        <p class="col-md-8 mx-auto fs-4">Upload an MRI scan and let our deep learning model assist in rapidly identifying tumor classifications with high accuracy.</p>
-        <a href="/predict" class="btn btn-primary btn-lg mt-3">Try the Model Now</a>
+<style>
+    .hero-box {
+        background: rgb(225, 205, 205);
+        border-radius: 20px;
+        border-left: 6px solid var(--secondary);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    .feature-card {
+        background: rgb(225, 205, 205);
+        border-radius: 15px;
+        padding: 30px 20px;
+        transition: all 0.3s ease;
+        border: 1px solid #eef2f5;
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(19, 64, 116, 0.1);
+        border-color: var(--accent);
+    }
+    .icon-circle {
+        width: 70px;
+        height: 70px;
+        background: rgba(19, 64, 116, 0.1);
+        color: var(--secondary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin: 0 auto 20px auto;
+        transition: all 0.3s ease;
+    }
+    .feature-card:hover .icon-circle {
+        background: var(--secondary);
+        color: white;
+    }
+    .btn-primary-custom {
+        background: var(--secondary);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 50px;
+        font-weight: 600;
+        color:aliceblue;
+        transition: 0.3s;
+    }
+    .btn-primary-custom:hover {
+        background: var(--primary);
+        color: white;
+        transform: scale(1.05);
+    }
+</style>
+
+<div class="hero-box p-5 mb-5 fade-in-up">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-primary mb-3 px-3 py-2 rounded-pill">Model v2.0 Live</span>
+            <h1 class="display-4 fw-bold mb-3 text-dark">Automated MRI Analysis</h1>
+            <p class="fs-5 text-muted mb-4">Deploying advanced Convolutional Neural Networks to assist radiologists in rapidly classifying brain anomalies with high precision.</p>
+            <a href="/predict" class="btn btn-primary-custom btn-lg shadow-sm"><i class="fa-solid fa-microscope me-2"></i>Run Diagnostics</a>
+        </div>
+        <div class="col-lg-4 text-center d-none d-lg-block">
+            <i class="fa-solid fa-network-wired text-muted" style="font-size: 8rem; opacity: 0.2;"></i>
+        </div>
     </div>
 </div>
 
-<div class="row text-center mt-5">
-    <div class="col-md-4">
-        <h3>Advanced Architecture</h3>
-        <p>Built utilizing transfer learning on the robust VGG16 network, fine-tuned specifically for medical imaging analysis.</p>
+<div class="row text-center mt-4">
+    <div class="col-md-4 fade-in-up delay-1">
+        <div class="feature-card h-100">
+            <div class="icon-circle"><i class="fa-solid fa-layer-group"></i></div>
+            <h4 class="fw-semibold">VGG16 Architecture</h4>
+            <p class="text-muted small">Deep transfer learning model fine-tuned specifically for distinct neurological tumor classifications.</p>
+        </div>
     </div>
-    <div class="col-md-4">
-        <h3>Fast Inference</h3>
-        <p>Optimized backend ensures that you receive diagnostic predictions and confidence scores in seconds.</p>
+    <div class="col-md-4 fade-in-up delay-2">
+        <div class="feature-card h-100">
+            <div class="icon-circle"><i class="fa-solid fa-bolt"></i></div>
+            <h4 class="fw-semibold">Rapid Inference</h4>
+            <p class="text-muted small">Optimized mathematical operations deliver diagnostic predictions and confidence scores in seconds.</p>
+        </div>
     </div>
-    <div class="col-md-4">
-        <h3>Secure & Private</h3>
-        <p>Uploaded images are processed securely and are not permanently stored, ensuring patient data privacy.</p>
+    <div class="col-md-4 fade-in-up delay-3">
+        <div class="feature-card h-100">
+            <div class="icon-circle"><i class="fa-solid fa-shield-halved"></i></div>
+            <h4 class="fw-semibold">Data Privacy</h4>
+            <p class="text-muted small">Stateless processing architecture ensures patient scans are never permanently stored on external servers.</p>
+        </div>
     </div>
 </div>
 {% endblock %}

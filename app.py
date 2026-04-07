@@ -19,7 +19,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 IMAGE_SIZE = 128
-base_model = VGG16(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), include_top=False, weights=None) # weights=None because you will load your own
+base_model = VGG16(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), include_top=False, weights='imagenet') # weights=None because you will load your own
 model = Sequential()
 model.add(Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))  # Input layer
 model.add(base_model)  # Add VGG16 base model
