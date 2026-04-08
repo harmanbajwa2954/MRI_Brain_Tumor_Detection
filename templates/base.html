@@ -1,62 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeuroScan AI - Diagnostic Assistant</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary: #0b2545;     /* Deep Medical Navy */
-            --secondary: #134074;   /* Tech Blue */
-            --accent: #8da9c4;      /* Soft clinical blue */
-            --bg-color: grey;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: #2c3e50;
-        }
-        /* Navbar Styling */
-        .navbar {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            padding: 15px 0;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        /* Global Animations */
-        .fade-in-up {
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        @keyframes fadeInUp {
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroScan AI — Brain Tumor Classification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/"><i class="fa-solid fa-brain me-2"></i>NeuroScan AI</a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link text-white fw-semibold" href="/">Dashboard</a>
-                <a class="nav-link btn btn-outline-light ms-3 px-4 rounded-pill" href="/predict">New Scan</a>
-            </div>
+
+  <!-- Neural mesh canvas -->
+  <canvas id="neural-canvas"></canvas>
+
+  <div class="site-wrap">
+
+    <!-- ════════════ NAV ════════════ -->
+    <nav id="nav">
+      <div class="nav-inner">
+        <div class="logo">
+          <a href="/"><div class="logo-icon">🧠</div></a>
+          <a href="/">Neuro<span class="accent">Scan</span> AI</a>
         </div>
+        <ul class="nav-links">
+          <li><a href="/diagnostics">Diagnose</a></li>
+          <li><a href="#architecture">Model</a></li>
+          <li><a href="#classes">Tumor Types</a></li>
+          <li><a href="#impact">Clinical Impact</a></li>
+          <li><a href="/diagnostics" class="nav-cta">Run Scan →</a></li>
+        </ul>
+      </div>
     </nav>
-    
-    <div class="container mt-5 pb-5">
-        {% block content %}{% endblock %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- ════════════ FOOTER ════════════ -->
+<footer>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      Neuro<span class="accent">Scan</span> AI
     </div>
+    <p>Built with VGG16 Transfer Learning · Flask · Python</p>
+    <p>© 2026 NeuroScan AI. All rights reserved.</p>
+    <p class="footer-warning">⚠️ For research and educational use only. Not for clinical diagnosis.</p>
+  </div>
+</footer>
+
+
+  <!-- ════════════ JAVASCRIPT ════════════ -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
