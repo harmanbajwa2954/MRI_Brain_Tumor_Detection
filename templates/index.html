@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Home | NeuroScan AI{% endblock %}
+
+{% block content %}
+
+<!-- KEEP HERO, FEATURES, ETC -->
+<!-- REMOVE diagnostic section -->
+
+
+<!-- ════════════ HERO ════════════ -->
+<section id="hero">
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    VGG16 Transfer Learning · MRI Classification
+  </div>
+
+  <h1 class="hero-headline">
+    AI-Powered<br>
+    <span class="gradient-text">Brain Tumor</span><br>
+    Diagnostics
+  </h1>
+
+  <p class="hero-sub">
+    Upload an MRI scan and receive an instant, high-confidence classification of brain tumors — powered by a
+    fine-tuned VGG16 deep learning model.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#diagnostic" class="btn-primary">
+      <span>🔬</span> Analyze MRI Scan
+    </a>
+    <a href="#architecture" class="btn-ghost">Explore Model</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-val">4</div>
+      <div class="stat-label">Classification Classes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">VGG16</div>
+      <div class="stat-label">Base Architecture</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">224px</div>
+      <div class="stat-label">Input Resolution</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">ImageNet</div>
+      <div class="stat-label">Pre-trained Weights</div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-mouse">
+      <div class="scroll-wheel"></div>
+    </div>
+    SCROLL
+  </div>
+</section>
+
+
+<!-- ════════════ ARCHITECTURE ════════════ -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label reveal">// model architecture</div>
+    <div class="arch-header">
+      <h2 class="section-title reveal">VGG16 Transfer Learning Pipeline</h2>
+      <p class="section-sub reveal">
+        A 16-layer deep CNN pre-trained on 14M ImageNet images, fine-tuned to extract discriminative features from
+        brain MRI scans.
+      </p>
+    </div>
+
+    <!-- Pipeline Flow -->
+    <div class="arch-flow reveal">
+      <div class="arch-step">
+        <div class="arch-step-icon s1">🖼️</div>
+        <div class="arch-step-name">MRI Input</div>
+        <div class="arch-step-desc">128×128 RGB<br>normalized tensor</div>
+      </div>
+      <div class="arch-connector">
+        <span class="connector-arrow">→</span>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-icon s2">🔲</div>
+        <div class="arch-step-name">Conv Blocks</div>
+        <div class="arch-step-desc">13 conv layers<br>ReLU activations</div>
+      </div>
+      <div class="arch-connector">
+        <span class="connector-arrow">→</span>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-icon s3">🔻</div>
+        <div class="arch-step-name">Pooling</div>
+        <div class="arch-step-desc">5× max-pool<br>spatial reduction</div>
+      </div>
+      <div class="arch-connector">
+        <span class="connector-arrow">→</span>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-icon s4">🔗</div>
+        <div class="arch-step-name">FC Layers</div>
+        <div class="arch-step-desc">4096 → 4096<br>Dropout 0.5</div>
+      </div>
+      <div class="arch-connector">
+        <span class="connector-arrow">→</span>
+      </div>
+      <div class="arch-step">
+        <div class="arch-step-icon s5">📊</div>
+        <div class="arch-step-name">Softmax</div>
+        <div class="arch-step-desc">4-class probability<br>distribution</div>
+      </div>
+    </div>
+
+    <!-- Detail Cards -->
+    <div class="arch-cards">
+      <div class="arch-card glass-hover reveal">
+        <div class="arch-card-num">01 — FEATURE EXTRACTION</div>
+        <div class="arch-card-title">Convolutional Backbone</div>
+        <div class="arch-card-text">
+          VGG16's 13 convolutional layers are frozen during training, preserving low-level feature detectors (edges,
+          textures, blobs) learned from 1.2M ImageNet images. These generalize remarkably well to medical imaging.
+        </div>
+        <div class="layer-viz">
+          <div class="layer-block" style="width:10px;height:28px;"></div>
+          <div class="layer-block" style="width:10px;height:36px;"></div>
+          <div class="layer-block" style="width:10px;height:44px;"></div>
+          <div class="layer-block" style="width:10px;height:52px;"></div>
+          <div class="layer-block" style="width:10px;height:44px;"></div>
+          <div class="layer-block" style="width:10px;height:36px;"></div>
+          <div class="layer-block" style="width:10px;height:28px;"></div>
+          <div class="layer-block" style="width:10px;height:22px;"></div>
+        </div>
+      </div>
+
+      <div class="arch-card glass-hover reveal">
+        <div class="arch-card-num">02 — FINE-TUNING</div>
+        <div class="arch-card-title">Custom Classification Head</div>
+        <div class="arch-card-text">
+          The original 1000-class ImageNet head is replaced with fully-connected layers tailored for 4-class brain
+          tumor classification. Only the new head and the final conv block are trained on labeled MRI data.
+        </div>
+        <div
+          style="margin-top:14px;display:flex;gap:6px;align-items:center;font-size:.75rem;color:var(--muted);font-family:var(--font-mono);">
+          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">4096</span>
+          <span>→</span>
+          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">4096</span>
+          <span>→</span>
+          <span style="padding:4px 8px;background:rgba(0,184,156,.15);border-radius:4px;color:var(--teal);">4</span>
+        </div>
+      </div>
+
+      <div class="arch-card glass-hover reveal">
+        <div class="arch-card-num">03 — PREPROCESSING</div>
+        <div class="arch-card-title">MRI Image Normalization</div>
+        <div class="arch-card-text">
+          Images are resized to 128×128, converted to RGB, and normalized using ImageNet mean/std. Data augmentation
+          (rotation, flip, zoom) during training improves robustness to varied MRI acquisition parameters.
+        </div>
+        <div style="margin-top:14px;font-size:.75rem;color:var(--muted);font-family:var(--font-mono);line-height:1.8;">
+          μ = [0.485, 0.456, 0.406]<br>
+          σ = [0.229, 0.224, 0.225]
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════ TUMOR CLASSES ════════════ -->
+<section id="classes">
+  <div class="container">
+    <div class="section-label reveal">// classification targets</div>
+    <h2 class="section-title reveal">Four Diagnostic Classes</h2>
+    <p class="section-sub reveal">
+      The model distinguishes between three tumor types and healthy tissue — each with distinct morphological
+      characteristics in MRI.
+    </p>
+
+    <div class="classes-panel">
+      <div class="class-card glioma reveal glass-hover">
+        <div class="class-card-emoji">🔴</div>
+        <div class="class-card-name glioma">Glioma</div>
+        <div class="class-card-desc">
+          Arises from glial cells. The most common and aggressive malignant brain tumor, often appearing as an
+          irregular, heterogeneous mass with surrounding edema on MRI T2/FLAIR sequences.
+        </div>
+      </div>
+
+      <div class="class-card meningioma reveal glass-hover">
+        <div class="class-card-emoji">🟡</div>
+        <div class="class-card-name meningioma">Meningioma</div>
+        <div class="class-card-desc">
+          Originates from the meninges. Usually benign and slow-growing, presenting as a well-defined, homogeneously
+          enhancing extra-axial mass with a dural tail sign on contrast MRI.
+        </div>
+      </div>
+
+      <div class="class-card pituitary reveal glass-hover">
+        <div class="class-card-emoji">🔵</div>
+        <div class="class-card-name pituitary">Pituitary</div>
+        <div class="class-card-desc">
+          Adenomas of the pituitary gland, located in the sella turcica. Often detected as a sellar or suprasellar
+          mass, frequently causing hormonal imbalance and visual field defects.
+        </div>
+      </div>
+
+      <div class="class-card notumor reveal glass-hover">
+        <div class="class-card-emoji">🟢</div>
+        <div class="class-card-name notumor">No Tumor</div>
+        <div class="class-card-desc">
+          Healthy brain tissue with no detectable neoplastic lesion. Correct negative identification is critical to
+          avoid unnecessary procedures, stress, and healthcare resource consumption.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════ CLINICAL IMPACT ════════════ -->
+<section id="impact">
+  <div class="container">
+    <div class="section-label reveal">// clinical impact</div>
+
+    <div class="impact-grid">
+      <div class="impact-text reveal">
+        <h2 class="section-title">Augmenting Radiologist Intelligence</h2>
+        <p class="section-sub">
+          NeuroScan AI is not a replacement for human expertise — it's a high-speed, tireless collaborator that
+          flags potential pathology and quantifies certainty so radiologists can focus their attention where it
+          matters most.
+        </p>
+
+        <div class="impact-bullets">
+          <div class="impact-bullet">
+            <div class="bullet-icon">⚡</div>
+            <div>
+              <div class="bullet-head">Rapid Triage</div>
+              <div class="bullet-desc">Pre-screen large volumes of MRI scans and surface high-probability positive
+                cases for immediate expert review, compressing diagnostic queues.</div>
+            </div>
+          </div>
+          <div class="impact-bullet">
+            <div class="bullet-icon">🧠</div>
+            <div>
+              <div class="bullet-head">Second Opinion Engine</div>
+              <div class="bullet-desc">Provide an independent AI assessment to corroborate or challenge initial
+                radiologist reads, reducing diagnostic error rates.</div>
+            </div>
+          </div>
+          <div class="impact-bullet">
+            <div class="bullet-icon">📉</div>
+            <div>
+              <div class="bullet-head">Reduced Diagnostic Fatigue</div>
+              <div class="bullet-desc">AI pre-annotation lets radiologists review flagged areas rather than entire
+                scans, lowering cognitive load during high-volume shifts.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="impact-cards reveal">
+        <div class="impact-card glass-hover">
+          <div class="impact-card-icon">🏥</div>
+          <div>
+            <div class="impact-card-title">Resource-Limited Settings</div>
+            <div class="impact-card-desc">In regions with specialist shortages, AI-assisted screening enables
+              general practitioners to make informed referral decisions before neurologist consultation.</div>
+          </div>
+        </div>
+        <div class="impact-card glass-hover">
+          <div class="impact-card-icon">📊</div>
+          <div>
+            <div class="impact-card-title">Longitudinal Monitoring</div>
+            <div class="impact-card-desc">Track tumor class confidence across sequential MRI studies, providing an
+              objective, quantified signal of treatment response or disease progression over time.</div>
+          </div>
+        </div>
+        <div class="impact-card glass-hover">
+          <div class="impact-card-icon">🔬</div>
+          <div>
+            <div class="impact-card-title">Research & Data Curation</div>
+            <div class="impact-card-desc">Auto-label large neuroimaging datasets for downstream research,
+              accelerating the training of next-generation oncology models and population-level studies.</div>
+          </div>
+        </div>
+        <div class="impact-card glass-hover">
+          <div class="impact-card-icon">⚠️</div>
+          <div>
+            <div class="impact-card-title">Regulatory Caveat</div>
+            <div class="impact-card-desc">This tool is a research prototype. It has not received FDA 510(k)
+              clearance or CE marking. All clinical decisions remain solely the responsibility of licensed medical
+              professionals.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+</div>
+
+{% endblock %}

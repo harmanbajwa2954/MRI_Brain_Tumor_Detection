@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroScan AI — Brain Tumor Classification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+
+  <!-- Neural mesh canvas -->
+  <canvas id="neural-canvas"></canvas>
+
+  <div class="site-wrap">
+
+    <!-- ════════════ NAV ════════════ -->
+    <nav id="nav">
+      <div class="nav-inner">
+        <div class="logo">
+          <a href="/"><div class="logo-icon">🧠</div></a>
+          <a href="/">Neuro<span class="accent">Scan</span> AI</a>
+        </div>
+        <ul class="nav-links">
+          <li><a href="/diagnostics">Diagnose</a></li>
+          <li><a href="#architecture">Model</a></li>
+          <li><a href="#classes">Tumor Types</a></li>
+          <li><a href="#impact">Clinical Impact</a></li>
+          <li><a href="/diagnostics" class="nav-cta">Run Scan →</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- ════════════ FOOTER ════════════ -->
+<footer>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      Neuro<span class="accent">Scan</span> AI
+    </div>
+    <p>Built with VGG16 Transfer Learning · Flask · Python</p>
+    <p>© 2026 NeuroScan AI. All rights reserved.</p>
+    <p class="footer-warning">⚠️ For research and educational use only. Not for clinical diagnosis.</p>
+  </div>
+</footer>
+
+
+  <!-- ════════════ JAVASCRIPT ════════════ -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
