@@ -16,19 +16,30 @@
         <div class="section-label reveal">// diagnostic tool</div>
         <h2 class="section-title reveal">MRI Classification Engine</h2>
         <p class="section-sub reveal">Drag and drop your MRI scan below. The model extracts deep features and
-            returns a classification with confidence scores.</p>
+            returns a classification with confidence scores.
+        Along with classification, we visualize the model’s attention using EigenCAM to highlight the regions influencing its decision.</p>
 
-        <div class="tool-grid">
+        <div class="tool-grid {% if result %}has-result{% endif %}">
 
             <!-- LEFT: Upload -->
-            <div class="upload-panel reveal">
+            <div class="upload-panel reveal" id="upload-panel">
 
                 {% if error %}
                 <div class="error-banner">⚠️ {{ error }}</div>
                 {% endif %}
 
-                <!-- Upload Form -->
-                <div id="upload-form-container">
+                {% if result %}
+                <!-- Compact stub — shown when a result is already displayed -->
+                <div id="upload-compact" class="upload-compact">
+                    <div class="upload-compact-label">// mri upload</div>
+                    <button id="analyze-another-btn" class="analyze-another-btn">
+                        <span>🔄</span> Analyze Another Scan
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- Upload Form — hidden initially when result is present -->
+                <div id="upload-form-container" class="{% if result %}upload-form-hidden{% endif %}">
                     <form id="upload-form" action="/diagnostics" method="POST" enctype="multipart/form-data">
 
                         <div class="upload-area" id="upload-area">
@@ -75,13 +86,16 @@
                             <div class="step-dot"></div>Extracting convolutional features
                         </div>
                         <div class="loading-step" id="step-3">
-                            <div class="step-dot"></div>Running VGG16 inference
+                            <div class="step-dot"></div>Running EfficientNetB0 inference
                         </div>
                         <div class="loading-step" id="step-4">
                             <div class="step-dot"></div>Computing softmax probabilities
                         </div>
                         <div class="loading-step" id="step-5">
                             <div class="step-dot"></div>Generating classification report
+                        </div>
+                        <div class="loading-step" id="step-6">
+                            <div class="step-dot"></div>Generating AI attention map
                         </div>
                     </div>
                 </div>
@@ -106,8 +120,23 @@
                     <div class="result-desc">{{ result.description }}</div>
 
                     <!-- Uploaded image -->
-                    <div class="result-img">
-                        <img src="{{ result.image_url }}" alt="Uploaded MRI scan" />
+
+                    <div class="result-img-grid">
+
+                        <!-- Original MRI -->
+                        <div class="img-card">
+                            <div class="img-label">Original MRI</div>
+                            <img src="{{ result.image_url }}" alt="Uploaded MRI scan" />
+                        </div>
+
+                        <!-- Heatmap -->
+                        {% if result.heatmap %}
+                        <div class="img-card">
+                            <div class="img-label">AI Focus (Heatmap)</div>
+                            <img src="data:image/png;base64,{{ result.heatmap }}" alt="Heatmap" />
+                        </div>
+                        {% endif %}
+
                     </div>
 
                     <!-- Confidence bar -->
@@ -140,6 +169,11 @@
                         <span>Research tool only. All results must be reviewed by a qualified radiologist before
                             any clinical action is taken.</span>
                     </div>
+
+                    <!-- Download Report -->
+                    <button class="download-report-btn" id="download-report-btn">
+                        <span>📄</span> Download Report (PDF)
+                    </button>
                 </div>
 
                 {% else %}
@@ -155,4 +189,92 @@
             </div>
         </div>
     </div>
+    <!-- Hidden print report (visible only on Ctrl+P / PDF export) -->
+    {% if result %}
+    <div id="print-report" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;padding-bottom:18px;border-bottom:2px solid #e2e8f0">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#00d4e8,#00b89c);display:flex;align-items:center;justify-content:center;font-size:1.3rem">🧠</div>
+            <div>
+                <div style="font-size:1.1rem;font-weight:800;letter-spacing:-.02em">NeuroScan AI</div>
+                <div style="font-size:.75rem;color:#64748b;letter-spacing:.06em">MRI CLASSIFICATION REPORT</div>
+            </div>
+            <div style="margin-left:auto;font-size:.75rem;color:#64748b" id="print-date"></div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
+            <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:.8rem;width:160px">PREDICTION</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:1rem">{{ result.label }}</td>
+            </tr>
+            <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:.8rem">TUMOR DETECTED</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-weight:600">{{ 'Yes' if result.is_tumor else 'No' }}</td>
+            </tr>
+            <tr>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:.8rem">CONFIDENCE</td>
+                <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:1.1rem;color:#0891b2">{{ result.confidence }}%</td>
+            </tr>
+            <tr>
+                <td style="padding:10px 0;color:#64748b;font-size:.8rem;vertical-align:top">DESCRIPTION</td>
+                <td style="padding:10px 0;font-size:.85rem;color:#374151">{{ result.description }}</td>
+            </tr>
+        </table>
+
+        <div style="margin-bottom:24px">
+            <div style="font-weight:700;margin-bottom:12px;font-size:.85rem;letter-spacing:.06em;color:#374151">CLASS PROBABILITIES</div>
+            {% for cls in result.all_probs %}
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:.82rem">
+                <span style="width:120px;color:#64748b">{{ cls.name }}</span>
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+                    <div style="height:100%;width:{{ cls.prob }}%;background:{% if cls.predicted %}linear-gradient(90deg,#00d4e8,#00b89c){% else %}#cbd5e1{% endif %};border-radius:99px"></div>
+                </div>
+                <span style="width:44px;text-align:right;font-weight:{% if cls.predicted %}700{% else %}400{% endif %}">{{ cls.prob }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="padding:14px 16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:.75rem;color:#92400e;margin-top:24px">
+            ⚠️ Research tool only. All results must be reviewed by a qualified radiologist before any clinical action is taken.
+        </div>
+        <div style="margin-top:24px;font-size:.7rem;color:#94a3b8;text-align:center">
+            Generated by NeuroScan AI · EfficientNetB0 Classification Engine
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        /* ── Analyze Another button ── */
+        document.getElementById("analyze-another-btn")?.addEventListener("click", function () {
+            const grid = document.querySelector(".tool-grid");
+            const compact = document.getElementById("upload-compact");
+            const formContainer = document.getElementById("upload-form-container");
+
+            compact.style.display = "none";
+            formContainer.classList.remove("upload-form-hidden");
+            grid.classList.add("upload-expanded");
+
+            /* Reset form state */
+            document.getElementById("file-selected-bar")?.classList.remove("show");
+            document.getElementById("preview-thumb")?.classList.remove("show");
+            document.getElementById("submit-btn").disabled = true;
+        });
+
+        /* ── Auto-scroll to results on page load ── */
+        document.addEventListener("DOMContentLoaded", function () {
+            /* Set print date */
+            const pd = document.getElementById("print-date");
+            if (pd) pd.textContent = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+            /* Scroll to result panel if result exists */
+            const grid = document.querySelector(".tool-grid.has-result");
+            if (grid) {
+                document.querySelector(".result-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
+
+        /* ── Download Report (print-to-PDF) ── */
+        document.getElementById("download-report-btn")?.addEventListener("click", function () {
+            window.print();
+        });
+    </script>
 </section>

@@ -145,13 +145,14 @@ window.addEventListener('scroll', () => {
   const formWrap = document.getElementById('upload-form-container');
   const loadBox  = document.getElementById('loading-state');
   const label    = document.getElementById('loading-label');
-  const steps    = [1,2,3,4,5].map(i => document.getElementById('step-' + i));
+  const steps    = [1,2,3,4,5,6].map(i => document.getElementById('step-' + i));
   const LABELS   = [
     'Preprocessing MRI...',
     'Extracting convolutional features...',
-    'Running VGG16 inference...',
+    'Running EfficientNet50 inference...',
     'Computing softmax probabilities...',
-    'Finalizing report...'
+    'Finalizing report...',
+    'Generating AI attention map...'
   ];
 
   if (!form) return;

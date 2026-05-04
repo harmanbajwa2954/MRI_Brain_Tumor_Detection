@@ -419,7 +419,7 @@ section {
 .section-sub {
     color: var(--muted);
     font-size: .97rem;
-    max-width: 520px;
+    max-width: 100%;
     margin-top: 14px;
 }
 
@@ -443,11 +443,117 @@ section {
 }
 
 .tool-grid {
+    margin-top: 20px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    margin-top: 60px;
+    gap: 30px;
     align-items: start;
+}
+
+/* When result is present → upload collapses to a slim stub */
+.tool-grid {
+    transition: grid-template-columns 0.5s cubic-bezier(.4, 0, .2, 1);
+}
+
+.tool-grid.has-result {
+    grid-template-columns: 220px 1fr;
+}
+
+/* When user clicks "Analyze Another" → both panels share space */
+.tool-grid.has-result.upload-expanded {
+    grid-template-columns: 1fr 1.4fr;
+}
+
+/* ── Upload compact stub (result present, form hidden) ── */
+.upload-compact {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.upload-compact-label {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    letter-spacing: .12em;
+    text-align: center;
+}
+
+.analyze-another-btn {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(0, 212, 232, .07);
+    border: 1.5px dashed rgba(0, 212, 232, .35);
+    color: var(--cyan);
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: background .3s, border-color .3s, box-shadow .3s, transform .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.analyze-another-btn:hover {
+    background: rgba(0, 212, 232, .14);
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan);
+    transform: translateY(-2px);
+}
+
+/* Hidden upload form when result is present and user hasn't clicked analyze-another */
+.upload-form-hidden {
+    display: none;
+}
+
+/* ── Download Report button ── */
+.download-report-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 13px;
+    border-radius: 10px;
+    background: rgba(0, 184, 156, .08);
+    border: 1px solid rgba(0, 184, 156, .28);
+    color: var(--teal);
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: .88rem;
+    cursor: pointer;
+    transition: background .3s, box-shadow .3s, transform .2s;
+    text-decoration: none;
+    letter-spacing: .02em;
+}
+
+.download-report-btn:hover {
+    background: rgba(0, 184, 156, .16);
+    box-shadow: var(--glow-teal);
+    transform: translateY(-2px);
+    color: var(--teal);
+}
+
+/* ── Print / PDF export ── */
+@media print {
+    body > *:not(#print-report) { display: none !important; }
+    #print-report {
+        display: block !important;
+        position: fixed;
+        inset: 0;
+        background: #fff;
+        color: #111;
+        padding: 48px 56px;
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    #print-report * { color: inherit; }
 }
 
 /* Upload panel */
@@ -467,7 +573,8 @@ section {
     cursor: pointer;
     transition: border-color .3s, background .3s, transform .2s;
     position: relative;
-    overflow: visible; /* Must NOT be hidden — file input overlay must extend to full area */
+    overflow: visible;
+    /* Must NOT be hidden — file input overlay must extend to full area */
 }
 
 .upload-area:hover,
@@ -649,8 +756,37 @@ section {
 .result-img img {
     width: 100%;
     max-height: 300px;
-    object-fit:scale-down ;
+    object-fit: scale-down;
     display: block;
+}
+
+.result-img-grid {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.img-card {
+    flex: 1;
+    min-width: 220px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+}
+
+.img-card img {
+    width: 100%;
+    border-radius: 8px;
+}
+
+.img-label {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    opacity: 0.8;
+    letter-spacing: 0.5px;
 }
 
 /* Loading state */
@@ -755,8 +891,58 @@ section {
     border-radius: var(--radius-lg);
     padding: 36px;
     backdrop-filter: blur(20px);
+   
+}
+.confusion-mini {
+    margin-top: 16px;
 }
 
+.cm-row {
+    display: flex;
+}
+
+.cm-cell {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    margin: 2px;
+    font-family: var(--font-mono);
+}
+
+/* intensity levels */
+.cm-cell.strong {
+    background: rgba(34,197,94,0.8);  /* green */
+    color: #fff;
+}
+
+.cm-cell.mid {
+    background: rgba(59,130,246,0.7); /* blue */
+    color: #fff;
+}
+
+.cm-cell.weak {
+    background: rgba(251,191,36,0.7); /* yellow */
+    color: #000;
+}
+
+.cm-cell.zero {
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+}
+
+/* labels */
+.cm-labels {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 6px;
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+}
 /* Jinja2: shown only when result exists */
 .result-empty {
     text-align: center;
