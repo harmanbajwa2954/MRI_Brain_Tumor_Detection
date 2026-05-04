@@ -12,7 +12,7 @@
 <section id="hero">
   <div class="hero-badge">
     <span class="badge-dot"></span>
-    VGG16 Transfer Learning · MRI Classification
+    EfficientNetB0 with Transfer Learning · MRI Classification
   </div>
 
   <h1 class="hero-headline">
@@ -23,11 +23,11 @@
 
   <p class="hero-sub">
     Upload an MRI scan and receive an instant, high-confidence classification of brain tumors — powered by a
-    fine-tuned VGG16 deep learning model.
+    fine-tuned EfficientNetB0 deep learning model.
   </p>
 
   <div class="hero-actions">
-    <a href="/diagnostics" class="btn-primary">
+    <a href="#diagnostic" class="btn-primary">
       <span>🔬</span> Analyze MRI Scan
     </a>
     <a href="#architecture" class="btn-ghost">Explore Model</a>
@@ -39,7 +39,7 @@
       <div class="stat-label">Classification Classes</div>
     </div>
     <div class="stat">
-      <div class="stat-val">VGG16</div>
+      <div class="stat-val">EfficientNetB0</div>
       <div class="stat-label">Base Architecture</div>
     </div>
     <div class="stat">
@@ -66,10 +66,10 @@
   <div class="container">
     <div class="section-label reveal">// model architecture</div>
     <div class="arch-header">
-      <h2 class="section-title reveal">VGG16 Transfer Learning Pipeline</h2>
+      <h2 class="section-title reveal">EfficientNetB0 Transfer Learning Pipeline</h2>
       <p class="section-sub reveal">
-        A 16-layer deep CNN pre-trained on 14M ImageNet images, fine-tuned to extract discriminative features from
-        brain MRI scans.
+        A state-of-the-art convolutional neural network using compound scaling, pre-trained on ImageNet and fine-tuned
+        for multi-class brain tumor classification with improved efficiency and generalization.
       </p>
     </div>
 
@@ -78,31 +78,31 @@
       <div class="arch-step">
         <div class="arch-step-icon s1">🖼️</div>
         <div class="arch-step-name">MRI Input</div>
-        <div class="arch-step-desc">128×128 RGB<br>normalized tensor</div>
+        <div class="arch-step-desc">224×224 RGB<br>preprocessed tensor</div>
       </div>
       <div class="arch-connector">
         <span class="connector-arrow">→</span>
       </div>
       <div class="arch-step">
-        <div class="arch-step-icon s2">🔲</div>
-        <div class="arch-step-name">Conv Blocks</div>
-        <div class="arch-step-desc">13 conv layers<br>ReLU activations</div>
+        <div class="arch-step-icon s2">⚙️</div>
+        <div class="arch-step-name">MBConv Blocks</div>
+        <div class="arch-step-desc">Depthwise separable<br>inverted residuals</div>
       </div>
       <div class="arch-connector">
         <span class="connector-arrow">→</span>
       </div>
       <div class="arch-step">
-        <div class="arch-step-icon s3">🔻</div>
-        <div class="arch-step-name">Pooling</div>
-        <div class="arch-step-desc">5× max-pool<br>spatial reduction</div>
+        <div class="arch-step-icon s3">📉</div>
+        <div class="arch-step-name">Global Pooling</div>
+        <div class="arch-step-desc">Spatial feature<br>aggregation</div>
       </div>
       <div class="arch-connector">
         <span class="connector-arrow">→</span>
       </div>
       <div class="arch-step">
         <div class="arch-step-icon s4">🔗</div>
-        <div class="arch-step-name">FC Layers</div>
-        <div class="arch-step-desc">4096 → 4096<br>Dropout 0.5</div>
+        <div class="arch-step-name">Dense Layers</div>
+        <div class="arch-step-desc">128 → 64<br>Dropout regularization</div>
       </div>
       <div class="arch-connector">
         <span class="connector-arrow">→</span>
@@ -118,20 +118,20 @@
     <div class="arch-cards">
       <div class="arch-card glass-hover reveal">
         <div class="arch-card-num">01 — FEATURE EXTRACTION</div>
-        <div class="arch-card-title">Convolutional Backbone</div>
+        <div class="arch-card-title">EfficientNet Backbone</div>
         <div class="arch-card-text">
-          VGG16's 13 convolutional layers are frozen during training, preserving low-level feature detectors (edges,
-          textures, blobs) learned from 1.2M ImageNet images. These generalize remarkably well to medical imaging.
+          EfficientNetB0 leverages compound scaling to balance depth, width, and resolution efficiently. Pre-trained
+          on ImageNet, its convolutional layers capture rich hierarchical features such as edges, textures, and tumor
+          patterns, which generalize effectively to MRI data.
         </div>
         <div class="layer-viz">
-          <div class="layer-block" style="width:10px;height:28px;"></div>
-          <div class="layer-block" style="width:10px;height:36px;"></div>
-          <div class="layer-block" style="width:10px;height:44px;"></div>
-          <div class="layer-block" style="width:10px;height:52px;"></div>
-          <div class="layer-block" style="width:10px;height:44px;"></div>
-          <div class="layer-block" style="width:10px;height:36px;"></div>
-          <div class="layer-block" style="width:10px;height:28px;"></div>
-          <div class="layer-block" style="width:10px;height:22px;"></div>
+          <div class="layer-block" style="width:10px;height:30px;"></div>
+          <div class="layer-block" style="width:10px;height:40px;"></div>
+          <div class="layer-block" style="width:10px;height:50px;"></div>
+          <div class="layer-block" style="width:10px;height:60px;"></div>
+          <div class="layer-block" style="width:10px;height:50px;"></div>
+          <div class="layer-block" style="width:10px;height:40px;"></div>
+          <div class="layer-block" style="width:10px;height:30px;"></div>
         </div>
       </div>
 
@@ -139,29 +139,33 @@
         <div class="arch-card-num">02 — FINE-TUNING</div>
         <div class="arch-card-title">Custom Classification Head</div>
         <div class="arch-card-text">
-          The original 1000-class ImageNet head is replaced with fully-connected layers tailored for 4-class brain
-          tumor classification. Only the new head and the final conv block are trained on labeled MRI data.
+          The original classification head is replaced with fully connected layers tailored for brain tumor detection.
+          Initial layers are frozen for feature extraction, followed by selective fine-tuning of deeper layers to adapt
+          the model to domain-specific MRI features.
         </div>
         <div
           style="margin-top:14px;display:flex;gap:6px;align-items:center;font-size:.75rem;color:var(--muted);font-family:var(--font-mono);">
-          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">4096</span>
+          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">128</span>
           <span>→</span>
-          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">4096</span>
+          <span style="padding:4px 8px;background:rgba(0,212,232,.1);border-radius:4px;color:var(--cyan);">64</span>
           <span>→</span>
           <span style="padding:4px 8px;background:rgba(0,184,156,.15);border-radius:4px;color:var(--teal);">4</span>
         </div>
       </div>
 
       <div class="arch-card glass-hover reveal">
-        <div class="arch-card-num">03 — PREPROCESSING</div>
-        <div class="arch-card-title">MRI Image Normalization</div>
+        <div class="arch-card-num">03 — PERFORMANCE & EXPLAINABILITY</div>
+        <div class="arch-card-title">Metrics & XAI Integration</div>
         <div class="arch-card-text">
-          Images are resized to 128×128, converted to RGB, and normalized using ImageNet mean/std. Data augmentation
-          (rotation, flip, zoom) during training improves robustness to varied MRI acquisition parameters.
+          The model achieves ~95% accuracy with strong class-wise performance (F1-score up to 0.99). Explainable AI
+          techniques such as EigenCAM are integrated to visualize model attention regions, enhancing interpretability
+          and trust in medical predictions.
         </div>
         <div style="margin-top:14px;font-size:.75rem;color:var(--muted);font-family:var(--font-mono);line-height:1.8;">
-          μ = [0.485, 0.456, 0.406]<br>
-          σ = [0.229, 0.224, 0.225]
+          Accuracy ≈ 95%<br>
+          Precision ≈ 0.96<br>
+          Recall ≈ 0.95<br>
+          F1-score ≈ 0.95
         </div>
       </div>
     </div>
