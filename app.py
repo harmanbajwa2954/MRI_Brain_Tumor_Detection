@@ -284,8 +284,8 @@ def segment_demo():
         volume_stack = np.load('demo_patient.npy')
 
         # 2. Run Inference
-        model = get_segmentation_model()
-        predictions = model.predict(volume_stack, batch_size=2)
+        segmodel = get_segmentation_model()
+        predictions = segmodel.predict(volume_stack, batch_size=2)
 
         # 3. Package for Frontend
         response_data = []
@@ -369,8 +369,8 @@ def segment_upload():
                 volume_stack[i, :, :, 3] = cv2.resize(vol_t2[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
 
             # 5. Run Inference
-            model = get_segmentation_model()
-            predictions = model.predict(volume_stack, batch_size=2)
+            segmodel = get_segmentation_model()
+            predictions = segmodel.predict(volume_stack, batch_size=2)
 
             # 6. Package Data
             response_data = []
