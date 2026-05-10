@@ -8,4 +8,4 @@ fastapi
 uvicorn[standard]
 nibabel
 scikit-learn
-opencv-python
+opencv-python-headless
