@@ -22,29 +22,28 @@ import nibabel as nib
 
 
 # ---------------Segmentation Model-------------------------
-
+@tf.keras.utils.register_keras_serializable()
 def dice_coef(y_true, y_pred, smooth=1.0):
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
-
+@tf.keras.utils.register_keras_serializable()
 def dice_loss(y_true, y_pred):
     return 1.0 - dice_coef(y_true, y_pred)
 
-
+@tf.keras.utils.register_keras_serializable()
 def hybrid_loss(y_true, y_pred):
     return tf.keras.losses.binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
-
-# Load the segmentation model
-segmentation_model = load_model('models/unet_brats_best.keras', custom_objects={
-    'hybrid_loss': hybrid_loss,
-    'dice_coef': dice_coef,
-    'dice_loss': dice_loss
-})
-
+segmentation_model = None
+def get_segmentation_model():
+    global segmentation_model
+    if segmentation_model is None:
+        print("Loading segmentation model for the first time...")
+        segmentation_model = load_model('models/unet_brats_best.keras')
+    return segmentation_model
 
 # --------------Classification model---------------------
 MODEL_ARCH = 'efficientnet'
@@ -285,7 +284,8 @@ def segment_demo():
         volume_stack = np.load('demo_patient.npy')
 
         # 2. Run Inference
-        predictions = segmentation_model.predict(volume_stack, batch_size=16)
+        model = get_segmentation_model()
+        predictions = model.predict(volume_stack, batch_size=2)
 
         # 3. Package for Frontend
         response_data = []
@@ -369,7 +369,8 @@ def segment_upload():
                 volume_stack[i, :, :, 3] = cv2.resize(vol_t2[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
 
             # 5. Run Inference
-            predictions = segmentation_model.predict(volume_stack, batch_size=2)
+            model = get_segmentation_model()
+            predictions = model.predict(volume_stack, batch_size=2)
 
             # 6. Package Data
             response_data = []
@@ -387,7 +388,7 @@ def segment_upload():
                         "mri_image": f"data:image/png;base64,{array_to_base64(base_mri, is_mask=False)}",
                         "mask_image": f"data:image/png;base64,{array_to_base64(pred_mask, is_mask=True)}",
                         "overlay_image": f"data:image/png;base64,{generate_overlay_image(base_mri, pred_mask)}",
-                        "tumor_detected": bool(tumor_pixels > 50),
+                        "tumor_detected": bool(tumor_pixels > 5),
                         "tumor_pixels": int(tumor_pixels)
                     })
 
