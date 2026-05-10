@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroScan AI — 3D Tumor Segmentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='segmentation_style.css') }}" />
+
+</head>
+
+<body>
+    <canvas id="neural-canvas"></canvas>
+
+    <div class="site-wrap">
+
+        <!-- ── NAV ── -->
+        <nav id="nav">
+            <div class="nav-inner">
+                <a href="/" class="logo">
+                    <div class="logo-icon">🧠</div>
+                    Neuro<span class="accent">Scan</span> AI
+                </a>
+                <ul class="nav-links">
+                    <li><a href="/diagnostics">Diagnose</a></li>
+                    <li><a href="/segmentation" class="active">Segmentation</a></li>
+                    <li><a href="/" class="nav-cta">Back Home</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- ── PAGE HEADER ── -->
+        <div class="page-header">
+            <div class="section-label reveal">// volumetric segmentation</div>
+            <h1 class="page-title reveal">
+                3D Brain Tumor<br>
+                <span class="gradient-text">Segmentation Viewer</span>
+            </h1>
+            <p class="page-sub reveal">
+                Upload a multi-modal MRI volume (FLAIR, T1, T1ce, T2) as a ZIP archive, or load a demo patient. The
+                U-Net model segments tumor regions slice-by-slice across the full volume.
+            </p>
+        </div>
+
+        <!-- ── MAIN GRID ── -->
+        <div class="main-grid">
+
+            <!-- ══════════ LEFT SIDEBAR ══════════ -->
+            <aside class="sidebar">
+
+                <!-- Upload / Demo panel -->
+                <div class="panel reveal">
+                    <div class="panel-header">
+                        <div class="panel-title">Patient Data Source</div>
+                        <div class="panel-badge">U-NET BraTS</div>
+                    </div>
+                    <div class="panel-body">
+
+                        <!-- Error banner -->
+                        <div class="error-banner" id="error-banner">
+                            <span>⚠️</span>
+                            <span id="error-text">An error occurred.</span>
+                        </div>
+
+                        <!-- Tab switcher -->
+                        <div class="source-tabs">
+                            <button class="source-tab active" id="tab-demo" onclick="switchTab('demo')">Demo
+                                Patient</button>
+                            <button class="source-tab" id="tab-upload" onclick="switchTab('upload')">Upload ZIP</button>
+                        </div>
+
+                        <!-- Demo content -->
+                        <div id="tab-demo-content">
+                            <p class="demo-desc">
+                                Load a pre-processed BraTS patient volume to instantly explore the segmentation viewer
+                                without uploading data.
+                            </p>
+                            <div
+                                style="padding: 16px; background: rgba(0,0,0,.2); border-radius: 10px; border: 1px solid rgba(255,255,255,.05); margin-bottom: 4px;">
+                                <div
+                                    style="font-family: var(--font-mono); font-size: .7rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .06em;">
+                                    DEMO SPECIFICATIONS</div>
+                                <div style="font-size: .8rem; color: var(--muted); line-height: 1.8;">
+                                    Modalities: FLAIR · T1 · T1ce · T2<br>
+                                    Slices: 155 · Resolution: 128 × 128<br>
+                                    Model: U-Net (BraTS trained)
+                                </div>
+                            </div>
+                            <button class="btn-primary" id="demo-btn" onclick="loadDemoPatient()">
+                                <span>🔬</span> Load Demo Patient
+                            </button>
+                        </div>
+
+                        <!-- Upload content -->
+                        <div id="tab-upload-content">
+                            <p class="demo-desc" style="margin-bottom:12px;">
+                                ZIP must contain <code
+                                    style="color:var(--cyan);font-family:var(--font-mono);font-size:.78rem">*flair*</code>,
+                                <code
+                                    style="color:var(--cyan);font-family:var(--font-mono);font-size:.78rem">*t1*</code>,
+                                <code
+                                    style="color:var(--cyan);font-family:var(--font-mono);font-size:.78rem">*t1ce*</code>,
+                                and <code
+                                    style="color:var(--cyan);font-family:var(--font-mono);font-size:.78rem">*t2*</code>
+                                NIfTI files (.nii or .nii.gz).
+                            </p>
+                            <div class="zip-drop" id="zip-drop">
+                                <input type="file" id="zip-input" accept=".zip" />
+                                <div class="zip-drop-icon">📦</div>
+                                <div class="zip-drop-title">Drop ZIP Archive Here</div>
+                                <div class="zip-drop-hint">or click to browse</div>
+                                <span class="format-tag">.ZIP</span>
+                            </div>
+                            <div class="zip-selected" id="zip-selected-bar">
+                                <span>📎</span>
+                                <span id="zip-filename">No file selected</span>
+                            </div>
+                            <button class="btn-primary" id="upload-btn" onclick="uploadPatientZip()" disabled
+                                style="margin-top:10px;">
+                                <span>⚡</span> Process &amp; Segment
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- Loading state -->
+                    <div id="loading-state">
+                        <div class="scan-ring"></div>
+                        <div class="loading-label" id="loading-label">Initializing...</div>
+                        <div class="loading-steps">
+                            <div class="loading-step" id="lstep-1">
+                                <div class="step-dot"></div>Loading volume data
+                            </div>
+                            <div class="loading-step" id="lstep-2">
+                                <div class="step-dot"></div>Normalizing modalities
+                            </div>
+                            <div class="loading-step" id="lstep-3">
+                                <div class="step-dot"></div>Running U-Net inference
+                            </div>
+                            <div class="loading-step" id="lstep-4">
+                                <div class="step-dot"></div>Generating overlays
+                            </div>
+                            <div class="loading-step" id="lstep-5">
+                                <div class="step-dot"></div>Packaging slices
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats panel — shown only after data loads -->
+                <div class="panel reveal" id="stats-panel" style="display:none;">
+                    <div class="panel-header">
+                        <div class="panel-title">Volume Statistics</div>
+                        <div class="panel-badge" id="stats-badge">LIVE</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="stats-grid">
+                            <div class="stat-row">
+                                <span class="stat-key">TOTAL SLICES</span>
+                                <span class="stat-val" id="stat-total">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-key">TUMOR SLICES</span>
+                                <span class="stat-val danger" id="stat-tumor-slices">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-key">CURRENT SLICE</span>
+                                <span class="stat-val" id="stat-current-slice">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-key">ORIGINAL INDEX</span>
+                                <span class="stat-val" id="stat-original-idx">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-key">TUMOR PIXELS</span>
+                                <span class="stat-val danger" id="stat-tumor-px">—</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-key">TUMOR DETECTED</span>
+                                <span class="stat-val" id="stat-detected">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- ══════════ RIGHT VIEWER ══════════ -->
+            <div class="viewer-panel">
+                <div class="panel reveal" style="overflow:visible;">
+
+                    <!-- Idle placeholder (shown before data loads) -->
+                    <div id="viewer-idle">
+                        <div class="idle-icon">🫁</div>
+                        <div class="idle-title">No Volume Loaded</div>
+                        <p class="idle-sub">Load a demo patient or upload a ZIP archive from the left panel to begin
+                            slice-by-slice segmentation viewing.</p>
+                    </div>
+
+                    <!-- Active viewer (shown after data loads) -->
+                    <div id="viewer-active">
+
+                        <!-- Toolbar -->
+                        <div class="view-toolbar">
+                            <div class="view-modes">
+                                <button class="view-mode-btn active" id="mode-mri" onclick="setViewMode('mri')">MRI
+                                    Only</button>
+                                <button class="view-mode-btn" id="mode-overlay" onclick="setViewMode('overlay')">Tumor
+                                    Overlay</button>
+                                <button class="view-mode-btn" id="mode-mask" onclick="setViewMode('mask')">Mask
+                                    Only</button>
+                            </div>
+                            <div class="tumor-badge detected" id="tumor-badge">
+                                <span class="badge-dot"></span> TUMOR DETECTED
+                            </div>
+                        </div>
+
+                        <!-- Image stack -->
+                        <div class="image-stack-wrapper">
+                            <div class="image-stack">
+                                <img id="mri-layer" class="image-layer" src="" alt="MRI slice" />
+                                <img id="overlay-layer" class="image-layer" src="" alt="Tumor overlay" />
+                                <img id="mask-layer" class="image-layer" src="" alt="Tumor mask" />
+                                <div class="slice-overlay" id="slice-overlay">SLICE 1 / 1</div>
+                                <div class="pixel-overlay" id="pixel-overlay" style="display:none;">■ 0 px</div>
+                            </div>
+                        </div>
+
+                        <!-- Scrubber -->
+                        <div class="scrubber-area">
+                            <div class="scrubber-header">
+                                <span class="scrubber-label">SLICE NAVIGATOR</span>
+                                <span class="scrubber-val"><span id="slice-counter">1</span> / <span
+                                        id="total-slices">1</span></span>
+                            </div>
+                            <input type="range" id="slice-slider" min="0" value="0" step="1" max="0" />
+                            <div class="scrubber-nav">
+                                <button class="scrubber-btn" onclick="stepSlice(-1)">← Prev</button>
+                                <button class="scrubber-btn" onclick="jumpToFirst()">⬆ First</button>
+                                <button class="scrubber-btn" onclick="jumpToLast()">⬇ Last</button>
+                                <button class="scrubber-btn" onclick="stepSlice(1)">Next →</button>
+                            </div>
+                        </div>
+
+                        <!-- Tumor pixel sparkline -->
+                        <div class="tumor-chart-wrap">
+                            <div class="chart-label">TUMOR PIXEL DENSITY PER SLICE</div>
+                            <canvas id="tumor-sparkline"></canvas>
+                        </div>
+
+                    </div><!-- /viewer-active -->
+                </div>
+            </div><!-- /viewer-panel -->
+
+        </div><!-- /main-grid -->
+        <div class="disclaimer reveal">
+            <span>⚠️</span>
+            <span>This segmentation tool is for research use only. Results must be reviewed by a qualified radiologist
+                before any clinical decision is made.</span>
+        </div>
+    </div><!-- /site-wrap -->
+
+    <script>
+        /* ═══════════════════════════════════════════════════════════════
+           STATE
+        ═══════════════════════════════════════════════════════════════ */
+        let volumeData = [];   // array of slice objects from API
+        let currentIndex = 0;
+        let currentMode = 'mri'; // 'mri' | 'overlay' | 'mask'
+
+        /* ═══════════════════════════════════════════════════════════════
+           NEURAL MESH CANVAS
+        ═══════════════════════════════════════════════════════════════ */
+        (function () {
+            const canvas = document.getElementById('neural-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let W, H, nodes = [];
+            const N = 55, MAX_D = 150, SPD = 0.2;
+            function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+            function init() {
+                nodes = [];
+                for (let i = 0; i < N; i++)
+                    nodes.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * SPD, vy: (Math.random() - .5) * SPD, r: Math.random() * 2 + 1 });
+            }
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+                nodes.forEach(n => {
+                    n.x += n.vx; n.y += n.vy;
+                    if (n.x < 0 || n.x > W) n.vx *= -1; if (n.y < 0 || n.y > H) n.vy *= -1;
+                });
+                for (let i = 0; i < nodes.length; i++)
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y, d = Math.sqrt(dx * dx + dy * dy);
+                        if (d < MAX_D) { ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.strokeStyle = `rgba(0,212,232,${(1 - d / MAX_D) * .4})`; ctx.lineWidth = .6; ctx.stroke(); }
+                    }
+                nodes.forEach(n => { ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,212,232,.45)'; ctx.fill(); });
+                requestAnimationFrame(draw);
+            }
+            window.addEventListener('resize', () => { resize(); init(); });
+            resize(); init(); draw();
+        })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           NAV + SCROLL REVEAL
+        ═══════════════════════════════════════════════════════════════ */
+        window.addEventListener('scroll', () => {
+            document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 40);
+        });
+        (function () {
+            const obs = new IntersectionObserver(entries => {
+                entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+        })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           TAB SWITCHER
+        ═══════════════════════════════════════════════════════════════ */
+        function switchTab(tab) {
+            document.getElementById('tab-demo').classList.toggle('active', tab === 'demo');
+            document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+            document.getElementById('tab-demo-content').style.display = tab === 'demo' ? 'flex' : 'none';
+            document.getElementById('tab-upload-content').style.display = tab === 'upload' ? 'flex' : 'none';
+            hideError();
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ZIP DRAG & DROP (Upload tab)
+        ═══════════════════════════════════════════════════════════════ */
+        (function () {
+            const drop = document.getElementById('zip-drop');
+            const zipInput = document.getElementById('zip-input');
+            const selBar = document.getElementById('zip-selected-bar');
+            const selName = document.getElementById('zip-filename');
+            const uploadBtn = document.getElementById('upload-btn');
+
+            drop.addEventListener('dragenter', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+            drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+            drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+            drop.addEventListener('drop', e => {
+                e.preventDefault(); drop.classList.remove('drag-over');
+                const f = e.dataTransfer && e.dataTransfer.files[0];
+                if (f) assignZip(f);
+            });
+            zipInput.addEventListener('change', () => { if (zipInput.files[0]) assignZip(zipInput.files[0]); });
+
+            function assignZip(file) {
+                if (!file.name.toLowerCase().endsWith('.zip')) { showError('Please upload a .zip archive.'); return; }
+                try { const dt = new DataTransfer(); dt.items.add(file); zipInput.files = dt.files; } catch (_) { }
+                selName.textContent = file.name;
+                selBar.classList.add('show');
+                uploadBtn.disabled = false;
+                hideError();
+            }
+        })();
+
+        /* ═══════════════════════════════════════════════════════════════
+           ERROR / LOADING HELPERS
+        ═══════════════════════════════════════════════════════════════ */
+        function showError(msg) {
+            const el = document.getElementById('error-banner');
+            document.getElementById('error-text').textContent = msg;
+            el.classList.add('show');
+        }
+        function hideError() { document.getElementById('error-banner').classList.remove('show'); }
+
+        const LOAD_LABELS = [
+            'Loading volume data...',
+            'Normalizing modalities...',
+            'Running U-Net inference...',
+            'Generating overlays...',
+            'Packaging slice data...'
+        ];
+
+        function startLoading() {
+            document.getElementById('loading-state').style.display = 'block';
+            document.getElementById('demo-btn').disabled = true;
+            document.getElementById('upload-btn').disabled = true;
+            let idx = 0;
+            const steps = [1, 2, 3, 4, 5].map(i => document.getElementById('lstep-' + i));
+            const label = document.getElementById('loading-label');
+
+            function tick() {
+                if (idx > 0) { steps[idx - 1].classList.remove('active'); steps[idx - 1].classList.add('done'); }
+                if (idx < steps.length) {
+                    steps[idx].classList.add('active');
+                    label.textContent = LOAD_LABELS[idx];
+                    idx++;
+                    setTimeout(tick, 800);
+                }
+            }
+            tick();
+        }
+
+        function stopLoading() {
+            document.getElementById('loading-state').style.display = 'none';
+            [1, 2, 3, 4, 5].forEach(i => {
+                const s = document.getElementById('lstep-' + i);
+                s.classList.remove('active', 'done');
+            });
+            document.getElementById('demo-btn').disabled = false;
+            document.getElementById('upload-btn').disabled = (document.getElementById('zip-input').files.length === 0);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           API: DEMO PATIENT  →  GET /segment_demo
+        ═══════════════════════════════════════════════════════════════ */
+        async function loadDemoPatient() {
+            hideError();
+            startLoading();
+            try {
+                const res = await fetch('/segment_demo');
+                const data = await res.json();
+                stopLoading();
+                if (data.status === 'success') {
+                    initViewer(data.slices);
+                } else {
+                    showError('Demo failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                stopLoading();
+                showError('Network error: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           API: ZIP UPLOAD  →  POST /segment_upload
+           (old HTML had wrong path: /api/segment_upload — fixed here)
+        ═══════════════════════════════════════════════════════════════ */
+        async function uploadPatientZip() {
+            const zipInput = document.getElementById('zip-input');
+            const file = zipInput.files[0];
+            if (!file) { showError('Please select a ZIP file first.'); return; }
+            hideError();
+            startLoading();
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/segment_upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                stopLoading();
+                if (data.status === 'success') {
+                    initViewer(data.slices);
+                } else {
+                    showError('Processing failed: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                stopLoading();
+                showError('Upload error: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           VIEWER INITIALISATION
+        ═══════════════════════════════════════════════════════════════ */
+        function initViewer(slices) {
+            if (!slices || slices.length === 0) {
+                showError('No tumor-positive slices found in the volume.');
+                return;
+            }
+
+            volumeData = slices;
+            currentIndex = 0;
+
+            // Switch idle → active
+            document.getElementById('viewer-idle').style.display = 'none';
+            document.getElementById('viewer-active').style.display = 'flex';
+
+            // Setup slider
+            const slider = document.getElementById('slice-slider');
+            slider.max = volumeData.length - 1;
+            slider.value = 0;
+
+            // Show stats panel
+            document.getElementById('stats-panel').style.display = 'block';
+            document.getElementById('stat-total').textContent = volumeData.length;
+            document.getElementById('stat-tumor-slices').textContent = volumeData.filter(s => s.tumor_detected).length;
+
+            // Render sparkline
+            drawSparkline(volumeData.map(s => s.tumor_pixels));
+
+            // Render first slice
+            updateViewer(0);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           VIEWER UPDATE
+        ═══════════════════════════════════════════════════════════════ */
+        function updateViewer(index) {
+            if (index < 0 || index >= volumeData.length) return;
+            currentIndex = index;
+            const slice = volumeData[index];
+
+            // Images
+            document.getElementById('mri-layer').src = slice.mri_image;
+            document.getElementById('mask-layer').src = slice.mask_image;
+            document.getElementById('overlay-layer').src = slice.overlay_image;
+
+            // Overlays
+            document.getElementById('slice-overlay').textContent =
+                `SLICE ${index + 1} / ${volumeData.length}`;
+
+            const pxEl = document.getElementById('pixel-overlay');
+            if (slice.tumor_detected) {
+                pxEl.textContent = `■ ${slice.tumor_pixels} px`;
+                pxEl.style.display = 'block';
+            } else {
+                pxEl.style.display = 'none';
+            }
+
+            // Tumor badge
+            const badge = document.getElementById('tumor-badge');
+            if (slice.tumor_detected) {
+                badge.className = 'tumor-badge detected';
+                badge.innerHTML = '<span class="badge-dot"></span> TUMOR DETECTED';
+            } else {
+                badge.className = 'tumor-badge clear';
+                badge.innerHTML = '<span class="badge-dot"></span> CLEAR';
+            }
+
+            // Stats panel
+            document.getElementById('stat-current-slice').textContent = index + 1;
+            document.getElementById('stat-original-idx').textContent = slice.slice_index;
+            document.getElementById('stat-tumor-px').textContent = slice.tumor_pixels;
+            const detEl = document.getElementById('stat-detected');
+            detEl.textContent = slice.tumor_detected ? 'Yes' : 'No';
+            detEl.className = 'stat-val ' + (slice.tumor_detected ? 'danger' : 'safe');
+
+            // Counter text
+            document.getElementById('slice-counter').textContent = index + 1;
+            document.getElementById('total-slices').textContent = volumeData.length;
+
+            // Slider position + fill
+            const slider = document.getElementById('slice-slider');
+            slider.value = index;
+            updateSliderFill(slider);
+
+            // Apply current view mode
+            applyViewMode();
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           VIEW MODE TOGGLE  (MRI | Overlay | Mask)
+        ═══════════════════════════════════════════════════════════════ */
+        function setViewMode(mode) {
+            currentMode = mode;
+            ['mri', 'overlay', 'mask'].forEach(m => {
+                document.getElementById('mode-' + m).classList.toggle('active', m === mode);
+            });
+            applyViewMode();
+        }
+
+        function applyViewMode() {
+            const mriLayer = document.getElementById('mri-layer');
+            const overlayLayer = document.getElementById('overlay-layer');
+            const maskLayer = document.getElementById('mask-layer');
+
+            // Reset all
+            mriLayer.style.opacity = '0';
+            overlayLayer.style.opacity = '0';
+            maskLayer.style.opacity = '0';
+
+            if (currentMode === 'mri') {
+                mriLayer.style.opacity = '1';
+            } else if (currentMode === 'overlay') {
+                overlayLayer.style.opacity = '1';
+            } else if (currentMode === 'mask') {
+                // Show MRI underneath + mask on top for context
+                mriLayer.style.opacity = '0.4';
+                maskLayer.style.opacity = '1';
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SCRUBBER CONTROLS
+        ═══════════════════════════════════════════════════════════════ */
+        document.getElementById('slice-slider').addEventListener('input', function (e) {
+            updateViewer(parseInt(e.target.value));
+        });
+
+        function stepSlice(delta) {
+            const next = currentIndex + delta;
+            if (next >= 0 && next < volumeData.length) updateViewer(next);
+        }
+        function jumpToFirst() { updateViewer(0); }
+        function jumpToLast() { updateViewer(volumeData.length - 1); }
+
+        // Keyboard arrow navigation
+        document.addEventListener('keydown', e => {
+            if (!volumeData.length) return;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); stepSlice(1); }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); stepSlice(-1); }
+        });
+
+        /* ═══════════════════════════════════════════════════════════════
+           SLIDER FILL (cyan progress gradient)
+        ═══════════════════════════════════════════════════════════════ */
+        function updateSliderFill(slider) {
+            const pct = slider.max > 0 ? (slider.value / slider.max) * 100 : 0;
+            slider.style.background = `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, rgba(255,255,255,.08) ${pct}%)`;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SPARKLINE CHART (tumor pixel density per slice)
+        ═══════════════════════════════════════════════════════════════ */
+        function drawSparkline(values) {
+            const canvas = document.getElementById('tumor-sparkline');
+            const ctx = canvas.getContext('2d');
+            const W = canvas.offsetWidth || 400;
+            const H = 52;
+            canvas.width = W;
+            canvas.height = H;
+
+            const max = Math.max(...values, 1);
+            const step = W / (values.length - 1 || 1);
+
+            // Gradient fill
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, 'rgba(0,212,232,0.35)');
+            grad.addColorStop(1, 'rgba(0,212,232,0)');
+
+            ctx.beginPath();
+            values.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v / max) * (H - 4);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            const lastX = (values.length - 1) * step;
+            ctx.lineTo(lastX, H); ctx.lineTo(0, H); ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Line
+            ctx.beginPath();
+            values.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v / max) * (H - 4);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = 'rgba(0,212,232,0.9)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Current position dot (redrawn on slide)
+            highlightSparklineDot(values, 0);
+        }
+
+        function highlightSparklineDot(values, idx) {
+            const canvas = document.getElementById('tumor-sparkline');
+            if (!canvas) return;
+            // We don't redraw on every slide to keep things snappy; the full redraw happens on init
+        }
+    </script>
+
+</body>
+
+</html>
