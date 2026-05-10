@@ -295,7 +295,7 @@ def segment_demo():
             # Only send slices with brain tissue to save bandwidth
             tumor_pixels = np.sum(pred_mask)
 
-            if tumor_pixels > 50:
+            if tumor_pixels > 5:
                 response_data.append({
                     "slice_index": i,
 
@@ -341,22 +341,17 @@ def segment_upload():
                 zip_ref.extractall(temp_dir)
 
             # 2. Find Modalities dynamically
-            # -------- Safe modality matching --------
-            all_nii_files = glob.glob(os.path.join(
-                temp_dir, '**/*.nii*'), recursive=True)
+            all_nii_files = glob.glob(os.path.join(temp_dir, '**/*.nii*'), recursive=True)
             flair_file = [f for f in all_nii_files if 'flair' in f.lower()]
             t1ce_file = [f for f in all_nii_files if 't1ce' in f.lower()]
-            # exclude t1ce from t1
-            t1_file = [
-                f for f in all_nii_files
-                if 't1' in f.lower() and 't1ce' not in f.lower()]
+            t1_file = [f for f in all_nii_files if 't1' in f.lower() and 't1ce' not in f.lower()]
             t2_file = [f for f in all_nii_files if 't2' in f.lower()]
 
             if not all([flair_file, t1_file, t1ce_file, t2_file]):
                 return jsonify({"status": "error", "message": "ZIP must contain flair, t1, t1ce, and t2 .nii files."}), 400
-            print("Found files:")
-            for f in all_nii_files:
-                print(f)
+            
+            print("Found 4 necessary MRI modalities.")
+
             # 3. Load & Normalize
             vol_flair = normalize_volume(nib.load(flair_file[0]).get_fdata())
             vol_t1 = normalize_volume(nib.load(t1_file[0]).get_fdata())
@@ -365,55 +360,43 @@ def segment_upload():
 
             # 4. Build Volume Stack (155, 128, 128, 4)
             num_slices = vol_flair.shape[2]
-            volume_stack = np.zeros(
-                (num_slices, 128, 128, 4), dtype=np.float32)
+            volume_stack = np.zeros((num_slices, 128, 128, 4), dtype=np.float32)
 
             for i in range(num_slices):
-                volume_stack[i, :, :, 0] = cv2.resize(
-                    vol_flair[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
-                volume_stack[i, :, :, 1] = cv2.resize(
-                    vol_t1[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
-                volume_stack[i, :, :, 2] = cv2.resize(
-                    vol_t1ce[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
-                volume_stack[i, :, :, 3] = cv2.resize(
-                    vol_t2[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
+                volume_stack[i, :, :, 0] = cv2.resize(vol_flair[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
+                volume_stack[i, :, :, 1] = cv2.resize(vol_t1[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
+                volume_stack[i, :, :, 2] = cv2.resize(vol_t1ce[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
+                volume_stack[i, :, :, 3] = cv2.resize(vol_t2[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
 
             # 5. Run Inference
-            predictions = segmentation_model.predict(
-                volume_stack, batch_size=2)
-            pred_mask = (predictions[i] > 0.5).astype(np.float32)
+            predictions = segmentation_model.predict(volume_stack, batch_size=2)
 
             # 6. Package Data
             response_data = []
             for i in range(num_slices):
                 base_mri = volume_stack[i, :, :, 0]
+                
+                # DEFINED INSIDE THE LOOP: Generates the mask for the current slice 'i'
+                pred_mask = (predictions[i] > 0.25).astype(np.float32)
+                
                 tumor_pixels = np.sum(pred_mask)
 
-                if tumor_pixels > 50:
+                if tumor_pixels > 5:
                     response_data.append({
                         "slice_index": i,
-
-                        "mri_image":
-                        f"data:image/png;base64,{array_to_base64(base_mri, is_mask=False)}",
-
-                        "mask_image":
-                        f"data:image/png;base64,{array_to_base64(pred_mask, is_mask=True)}",
-
-                        "overlay_image":
-                        f"data:image/png;base64,{generate_overlay_image(base_mri, pred_mask)}",
-
-                        "tumor_detected":
-                        bool(tumor_pixels > 50),
-
-                        "tumor_pixels":
-                        int(tumor_pixels)
+                        "mri_image": f"data:image/png;base64,{array_to_base64(base_mri, is_mask=False)}",
+                        "mask_image": f"data:image/png;base64,{array_to_base64(pred_mask, is_mask=True)}",
+                        "overlay_image": f"data:image/png;base64,{generate_overlay_image(base_mri, pred_mask)}",
+                        "tumor_detected": bool(tumor_pixels > 50),
+                        "tumor_pixels": int(tumor_pixels)
                     })
 
             return jsonify({"status": "success", "slices": response_data})
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route('/segmentation', methods=['GET'])
 def segmentation_page():
