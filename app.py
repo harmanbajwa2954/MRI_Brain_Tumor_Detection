@@ -136,7 +136,8 @@ def generate_xai_image(img_path):
 
 
 # -------------------------Load model---------------------
-MODEL_PATH = 'models/BT_EfB0_model.keras'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, 'models', 'BT_EfB0_model.keras')
 try:
     model = load_model(MODEL_PATH)
     print(f'[OK] Model loaded from {MODEL_PATH}')
