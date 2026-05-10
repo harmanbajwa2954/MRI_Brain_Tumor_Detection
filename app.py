@@ -405,6 +405,10 @@ def segmentation_page():
     # Renders the UI from the templates folder
     return render_template('segmentation.html')
 
+@app.route('/unet_architecture', methods=['GET'])
+def unet_architecture():
+    return render_template('unet_architecture.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
