@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroScan AI — U-Net Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      --navy:       #040d1a;
+      --navy-mid:   #071628;
+      --navy-light: #0c2340;
+      --panel:      rgba(7, 22, 40, 0.82);
+      --cyan:       #00d4e8;
+      --cyan-dim:   #00a8b8;
+      --teal:       #00b89c;
+      --teal-dim:   #00917b;
+      --white:      #f0f6ff;
+      --muted:      #6b8aac;
+      --border:     rgba(0, 212, 232, 0.18);
+      --border-s:   rgba(0, 212, 232, 0.38);
+      --glow-cyan:  0 0 32px rgba(0, 212, 232, 0.35);
+      --glow-teal:  0 0 32px rgba(0, 184, 156, 0.35);
+      --radius:     14px;
+      --radius-lg:  22px;
+      --font-head:  'Syne', sans-serif;
+      --font-body:  'DM Sans', sans-serif;
+      --font-mono:  'DM Mono', monospace;
+
+      /* section accent colours */
+      --col-input:    #00d4e8;
+      --col-encoder:  #7c6fff;
+      --col-bottle:   #ff6b6b;
+      --col-skip:     #ffb400;
+      --col-decoder:  #00b89c;
+      --col-output:   #4ade80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--navy); color: var(--white); font-family: var(--font-body); font-weight: 300; line-height: 1.7; overflow-x: hidden; }
+    ::selection { background: var(--cyan); color: var(--navy); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--navy); }
+    ::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
+
+    /* ══ CANVAS ══ */
+    #neural-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
+    .site-wrap { position: relative; z-index: 1; }
+
+    /* ══ NAV ══ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 0;
+      backdrop-filter: blur(18px) saturate(180%);
+      background: rgba(4,13,26,0.75);
+      border-bottom: 1px solid var(--border);
+      transition: padding .3s;
+    }
+    nav.scrolled { padding: 12px 0; }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 800; font-size: 1.1rem; color: var(--white); letter-spacing: -.02em; text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--teal)); display: flex; align-items: center; justify-content: center; font-size: .95rem; }
+    .logo span.accent { color: var(--cyan); }
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+    .nav-links a { color: var(--muted); font-size: .88rem; font-weight: 400; letter-spacing: .02em; transition: color .2s; text-decoration: none; }
+    .nav-links a:hover, .nav-links a.active { color: var(--white); }
+    .nav-cta { padding: 9px 20px; border-radius: 8px; background: linear-gradient(135deg, var(--cyan), var(--teal)); color: var(--navy) !important; font-weight: 600 !important; font-size: .83rem !important; transition: box-shadow .25s, transform .2s !important; }
+    .nav-cta:hover { box-shadow: var(--glow-cyan); transform: translateY(-1px); }
+
+    /* ══ LAYOUT ══ */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+
+    /* ══ HERO ══ */
+    .page-hero {
+      padding: 130px 28px 70px;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero-label { font-family: var(--font-mono); font-size: .73rem; letter-spacing: .18em; color: var(--cyan); margin-bottom: 14px; text-transform: uppercase; }
+    .hero-title { font-family: var(--font-head); font-size: clamp(2.2rem, 4.5vw, 3.4rem); font-weight: 800; line-height: 1.06; letter-spacing: -.04em; }
+    .hero-title .g { background: linear-gradient(100deg, var(--cyan) 0%, var(--teal) 60%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { color: var(--muted); font-size: .97rem; margin-top: 18px; max-width: 520px; line-height: 1.75; }
+    .hero-actions { display: flex; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--cyan), var(--teal));
+      color: var(--navy); font-family: var(--font-head); font-weight: 700;
+      font-size: .88rem; border: none; cursor: pointer;
+      text-decoration: none;
+      transition: box-shadow .3s, transform .2s;
+    }
+    .btn-primary:hover { box-shadow: var(--glow-cyan); transform: translateY(-2px); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 10px;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      font-family: var(--font-head); font-weight: 600; font-size: .85rem;
+      cursor: pointer; text-decoration: none;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .btn-ghost:hover { color: var(--white); border-color: var(--border-s); background: rgba(0,212,232,.05); }
+
+    /* Hero stats card */
+    .hero-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px;
+      backdrop-filter: blur(20px);
+    }
+    .hero-card-title { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .12em; color: var(--muted); margin-bottom: 20px; }
+    .spec-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.04); gap: 16px; }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-key { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); letter-spacing: .04em; flex-shrink: 0; }
+    .spec-val { font-family: var(--font-mono); font-size: .78rem; color: var(--white); text-align: right; }
+    .spec-val .tag { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: .68rem; margin-left: 4px; }
+    .tag-cyan  { background: rgba(0,212,232,.12); border: 1px solid rgba(0,212,232,.22); color: var(--cyan); }
+    .tag-teal  { background: rgba(0,184,156,.12); border: 1px solid rgba(0,184,156,.22); color: var(--teal); }
+    .tag-red   { background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.22); color: #ff6b6b; }
+    .tag-amber { background: rgba(255,180,0,.1); border: 1px solid rgba(255,180,0,.2); color: #ffb400; }
+    .tag-purple { background: rgba(124,111,255,.12); border: 1px solid rgba(124,111,255,.22); color: #a78bff; }
+    .tag-green { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.2); color: #4ade80; }
+
+    /* ══ TOC SIDEBAR LAYOUT ══ */
+    .doc-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 40px;
+      max-width: 1100px;
+      margin: 0 auto 80px;
+      padding: 0 28px;
+      align-items: start;
+    }
+
+    /* Sticky TOC */
+    .toc {
+      position: sticky; top: 88px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 22px;
+      backdrop-filter: blur(20px);
+    }
+    .toc-title { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .14em; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; }
+    .toc-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .toc-list a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: .8rem; color: var(--muted); text-decoration: none;
+      transition: background .2s, color .2s;
+      border: 1px solid transparent;
+    }
+    .toc-list a:hover { background: rgba(0,212,232,.06); color: var(--white); border-color: var(--border); }
+    .toc-list a.active { background: rgba(0,212,232,.08); color: var(--cyan); border-color: rgba(0,212,232,.2); }
+    .toc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ══ SECTION SHARED ══ */
+    .doc-sections { display: flex; flex-direction: column; gap: 48px; }
+
+    .doc-section { scroll-margin-top: 100px; }
+
+    .sec-label { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .16em; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; }
+    .sec-title { font-family: var(--font-head); font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; line-height: 1.12; letter-spacing: -.03em; margin-bottom: 16px; }
+    .sec-body { font-size: .93rem; color: var(--muted); line-height: 1.8; max-width: 720px; }
+    .sec-body p + p { margin-top: 14px; }
+    .sec-body strong { color: var(--white); font-weight: 500; }
+    .sec-body code { font-family: var(--font-mono); font-size: .82rem; background: rgba(0,212,232,.1); color: var(--cyan); padding: 2px 7px; border-radius: 5px; }
+
+    /* ══ CARDS GRID ══ */
+    .cards-grid { display: grid; gap: 18px; margin-top: 28px; }
+    .cards-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .cards-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      backdrop-filter: blur(16px);
+      transition: border-color .3s, transform .3s, box-shadow .3s;
+    }
+    .card:hover { border-color: var(--border-s); transform: translateY(-3px); box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+    .card-num { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .1em; margin-bottom: 10px; }
+    .card-title { font-family: var(--font-head); font-size: 1rem; font-weight: 700; margin-bottom: 9px; }
+    .card-body { font-size: .82rem; color: var(--muted); line-height: 1.65; }
+    .card-body code { font-family: var(--font-mono); font-size: .78rem; background: rgba(0,212,232,.08); color: var(--cyan); padding: 1px 6px; border-radius: 4px; }
+
+    /* ══ U-NET DIAGRAM ══ */
+    .unet-diagram-wrap {
+      margin-top: 36px;
+      background: rgba(0,0,0,.3); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px 24px;
+      overflow-x: auto;
+    }
+    .unet-diagram { min-width: 680px; }
+
+    /* Column labels */
+    .unet-col-labels {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .unet-col-label { font-family: var(--font-mono); font-size: .62rem; letter-spacing: .06em; color: var(--muted); }
+
+    /* Main diagram row */
+    .unet-row {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+      align-items: center;
+    }
+
+    /* Block boxes */
+    .unet-block {
+      border-radius: 8px; padding: 10px 6px;
+      text-align: center; font-family: var(--font-mono);
+      font-size: .63rem; letter-spacing: .04em;
+      border: 1px solid; line-height: 1.4;
+      transition: transform .2s, box-shadow .2s;
+      cursor: default;
+    }
+    .unet-block:hover { transform: scale(1.06); }
+
+    .unet-block.input    { background: rgba(0,212,232,.1);   border-color: rgba(0,212,232,.3);   color: var(--col-input); }
+    .unet-block.enc      { background: rgba(124,111,255,.1); border-color: rgba(124,111,255,.3); color: var(--col-encoder); }
+    .unet-block.pool     { background: rgba(124,111,255,.05);border-color: rgba(124,111,255,.15);color: #a78bff; font-size:.58rem; }
+    .unet-block.bottle   { background: rgba(255,107,107,.12);border-color: rgba(255,107,107,.35);color: var(--col-bottle); }
+    .unet-block.up       { background: rgba(0,184,156,.08);  border-color: rgba(0,184,156,.25);  color: var(--col-decoder); font-size:.58rem; }
+    .unet-block.dec      { background: rgba(0,184,156,.1);   border-color: rgba(0,184,156,.3);   color: var(--col-decoder); }
+    .unet-block.output   { background: rgba(74,222,128,.1);  border-color: rgba(74,222,128,.3);  color: var(--col-output); }
+    .unet-block.skip-src { box-shadow: 0 0 0 2px rgba(255,180,0,.3); }
+    .unet-block.connector{ background: transparent; border: none; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--muted); }
+
+    /* Skip connection arrows drawn with SVG */
+    .skip-svg { width: 100%; height: 28px; display: block; margin: 0; overflow: visible; }
+
+    /* ══ INPUT PIPELINE VISUAL ══ */
+    .modality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+    .modality-card {
+      background: var(--panel); border-radius: var(--radius); padding: 20px 14px;
+      border: 1px solid var(--border); text-align: center;
+      transition: border-color .3s, transform .3s;
+    }
+    .modality-card:hover { border-color: var(--border-s); transform: translateY(-3px); }
+    .mod-icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .mod-name { font-family: var(--font-head); font-size: .88rem; font-weight: 700; margin-bottom: 5px; }
+    .mod-desc { font-size: .75rem; color: var(--muted); line-height: 1.55; }
+    .mod-channel { font-family: var(--font-mono); font-size: .68rem; margin-top: 8px; padding: 3px 8px; border-radius: 100px; display: inline-block; }
+
+    /* ══ ENCODER DEPTH VISUAL ══ */
+    .depth-visual { display: flex; gap: 16px; align-items: flex-end; margin-top: 28px; flex-wrap: wrap; }
+    .depth-level {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 16px 12px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); flex: 1; min-width: 120px;
+      transition: border-color .3s, transform .3s;
+    }
+    .depth-level:hover { border-color: var(--border-s); transform: translateY(-3px); }
+    .depth-level-num { font-family: var(--font-mono); font-size: .65rem; color: var(--muted); letter-spacing: .08em; }
+    .depth-res { font-family: var(--font-head); font-size: .95rem; font-weight: 800; }
+    .depth-filters { font-family: var(--font-mono); font-size: .7rem; color: var(--muted); }
+    .depth-drop { font-family: var(--font-mono); font-size: .65rem; padding: 2px 8px; border-radius: 100px; border: 1px solid rgba(255,180,0,.2); color: #ffb400; margin-top: 4px; }
+    .depth-bar { width: 100%; border-radius: 4px; background: linear-gradient(180deg, var(--col-encoder), rgba(124,111,255,.3)); }
+
+    /* ══ SKIP CONNECTION EXPLAINER ══ */
+    .skip-explainer {
+      margin-top: 28px; padding: 28px;
+      background: rgba(255,180,0,.04);
+      border: 1px solid rgba(255,180,0,.18);
+      border-radius: var(--radius-lg);
+    }
+    .skip-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .skip-icon-wrap { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,180,0,.1); border: 1px solid rgba(255,180,0,.25); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+    .skip-title { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; }
+    .skip-subtitle { font-size: .8rem; color: var(--muted); }
+    .skip-body { font-size: .88rem; color: var(--muted); line-height: 1.8; }
+    .skip-body strong { color: var(--white); font-weight: 500; }
+
+    .skip-flow { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .skip-box { padding: 10px 16px; border-radius: 9px; font-family: var(--font-mono); font-size: .75rem; letter-spacing: .04em; border: 1px solid; }
+    .skip-box.enc-box  { background: rgba(124,111,255,.1); border-color: rgba(124,111,255,.3); color: #a78bff; }
+    .skip-box.dec-box  { background: rgba(0,184,156,.1);   border-color: rgba(0,184,156,.3);   color: var(--teal); }
+    .skip-box.cat-box  { background: rgba(255,180,0,.1);   border-color: rgba(255,180,0,.3);   color: #ffb400; }
+    .skip-arrow { color: var(--muted); font-size: 1.1rem; }
+
+    /* ══ LOSS FUNCTION BREAKDOWN ══ */
+    .loss-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-top: 28px; }
+    .loss-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      backdrop-filter: blur(16px);
+      transition: border-color .3s, transform .3s;
+    }
+    .loss-card:hover { transform: translateY(-3px); }
+    .loss-card.bce { border-top: 3px solid rgba(0,212,232,.6); }
+    .loss-card.dice{ border-top: 3px solid rgba(0,184,156,.6); }
+    .loss-card.hybrid { border-top: 3px solid rgba(255,180,0,.6); background: rgba(255,180,0,.03); }
+    .loss-icon { font-size: 1.6rem; margin-bottom: 12px; }
+    .loss-name { font-family: var(--font-head); font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .loss-formula {
+      font-family: var(--font-mono); font-size: .78rem; color: var(--cyan);
+      background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.06);
+      border-radius: 8px; padding: 10px 14px; margin: 12px 0;
+      line-height: 1.7;
+    }
+    .loss-card.dice .loss-formula { color: var(--teal); }
+    .loss-card.hybrid .loss-formula { color: #ffb400; }
+    .loss-desc { font-size: .8rem; color: var(--muted); line-height: 1.65; }
+
+    /* ══ TRAINING CONFIG ══ */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 28px; }
+    .config-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; backdrop-filter: blur(16px); }
+    .config-title { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .1em; color: var(--muted); margin-bottom: 14px; }
+    .config-rows { display: flex; flex-direction: column; gap: 8px; }
+    .config-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(0,0,0,.2); border-radius: 7px; }
+    .config-key { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+    .config-val { font-family: var(--font-mono); font-size: .75rem; color: var(--white); }
+
+    /* ══ CTA BANNER ══ */
+    .cta-banner {
+      margin: 60px auto;
+      max-width: 1100px;
+      padding: 0 28px;
+    }
+    .cta-inner {
+      padding: 44px 48px;
+      background: linear-gradient(135deg, rgba(0,212,232,.08) 0%, rgba(0,184,156,.06) 100%);
+      border: 1px solid rgba(0,212,232,.22);
+      border-radius: var(--radius-lg);
+      display: flex; align-items: center; justify-content: space-between; gap: 32px;
+      flex-wrap: wrap;
+    }
+    .cta-text-head { font-family: var(--font-head); font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+    .cta-text-sub { font-size: .9rem; color: var(--muted); max-width: 480px; }
+    .cta-actions { display: flex; gap: 14px; flex-shrink: 0; flex-wrap: wrap; }
+
+    /* ══ REVEAL ══ */
+    .reveal { opacity: 0; transform: translateY(36px); transition: opacity .75s ease, transform .75s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width: 1024px) {
+      .page-hero   { grid-template-columns: 1fr; }
+      .hero-card   { display: none; }
+      .doc-layout  { grid-template-columns: 1fr; }
+      .toc         { display: none; }
+      .cards-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+      .loss-grid   { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .cards-grid.cols-2, .cards-grid.cols-3 { grid-template-columns: 1fr; }
+      .modality-grid { grid-template-columns: 1fr 1fr; }
+      .depth-visual  { flex-direction: column; }
+      .config-grid   { grid-template-columns: 1fr; }
+      .cta-inner     { padding: 28px 22px; }
+      .nav-links     { display: none; }
+      .skip-flow     { gap: 8px; }
+    }
+  </style>
+</head>
+
+<body>
+<canvas id="neural-canvas"></canvas>
+
+<div class="site-wrap">
+
+  <!-- ══ NAV ══ -->
+  <nav id="nav">
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">🧠</div>
+        Neuro<span class="accent">Scan</span> AI
+      </a>
+      <ul class="nav-links">
+        <li><a href="/diagnostics">Diagnose</a></li>
+        <li><a href="/segmentation">Segmentation</a></li>
+        <li><a href="/unet_architecture" class="active">Architecture</a></li>
+        <li><a href="/#classes">Tumor Types</a></li>
+        <li><a href="/segmentation" class="nav-cta">Open Viewer →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ══ HERO ══ -->
+  <div class="page-hero">
+    <div>
+      <div class="hero-label reveal">// model documentation</div>
+      <h1 class="hero-title reveal">
+        2D U-Net<br>
+        <span class="g">Segmentation</span><br>
+        Architecture
+      </h1>
+      <p class="hero-sub reveal">
+        A deep dive into the U-Net pipeline powering NeuroScan's volumetric tumor segmentation — from 4-channel multi-modal MRI input through the contracting and expansive paths to the final binary mask output.
+      </p>
+      <div class="hero-actions reveal">
+        <a href="/segmentation" class="btn-primary">🔬 Open Segmentation Viewer</a>
+        <a href="#sec-input" class="btn-ghost">Read Architecture →</a>
+      </div>
+    </div>
+
+    <!-- Quick-spec card -->
+    <div class="hero-card reveal">
+      <div class="hero-card-title">MODEL SPECIFICATIONS</div>
+      <div class="spec-row">
+        <span class="spec-key">ARCHITECTURE</span>
+        <span class="spec-val"><span class="tag tag-cyan">2D U-Net</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">DATASET</span>
+        <span class="spec-val"><span class="tag tag-purple">BraTS 2020</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">TASK</span>
+        <span class="spec-val"><span class="tag tag-teal">Binary Segmentation</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">INPUT SHAPE</span>
+        <span class="spec-val"><span class="tag tag-cyan">128 × 128 × 4</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">OUTPUT SHAPE</span>
+        <span class="spec-val"><span class="tag tag-green">128 × 128 × 1</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">OUTPUT ACTIVATION</span>
+        <span class="spec-val"><span class="tag tag-teal">Sigmoid</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">OPTIMIZER</span>
+        <span class="spec-val"><span class="tag tag-purple">Adam · lr=1e-4</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">LOSS FUNCTION</span>
+        <span class="spec-val"><span class="tag tag-amber">Hybrid (BCE + Dice)</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">NORMALIZATION</span>
+        <span class="spec-val"><span class="tag tag-cyan">Z-Score per Volume</span></span>
+      </div>
+      <div class="spec-row" style="border-bottom:none">
+        <span class="spec-key">INIT</span>
+        <span class="spec-val"><span class="tag tag-purple">He Normal</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FULL U-NET DIAGRAM ══ -->
+  <div class="container reveal" style="margin-bottom:60px;">
+    <div class="unet-diagram-wrap">
+      <div style="font-family:var(--font-mono);font-size:.68rem;letter-spacing:.12em;color:var(--muted);margin-bottom:20px;">FULL ARCHITECTURE OVERVIEW — 2D U-NET (BraTS 2020)</div>
+      <div class="unet-diagram">
+
+        <!-- Column labels -->
+        <div class="unet-col-labels">
+          <div class="unet-col-label">INPUT</div>
+          <div class="unet-col-label" style="color:#a78bff">ENC L1</div>
+          <div class="unet-col-label" style="color:#a78bff">ENC L2</div>
+          <div class="unet-col-label" style="color:#a78bff">ENC L3</div>
+          <div class="unet-col-label" style="color:#ff6b6b">BOTTLENECK</div>
+          <div class="unet-col-label" style="color:var(--teal)">DEC L3</div>
+          <div class="unet-col-label" style="color:var(--teal)">DEC L2</div>
+          <div class="unet-col-label" style="color:var(--teal)">DEC L1</div>
+          <div class="unet-col-label" style="color:#4ade80">OUTPUT</div>
+        </div>
+
+        <!-- Skip connection arrows (SVG above the blocks) -->
+        <svg class="skip-svg" viewBox="0 0 900 28" preserveAspectRatio="none">
+          <!-- Skip 1: ENC L1 → DEC L1 -->
+          <defs>
+            <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="rgba(255,180,0,0.7)" />
+            </marker>
+          </defs>
+          <path d="M150,22 Q150,4 450,4 Q750,4 750,22" fill="none" stroke="rgba(255,180,0,0.45)" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)" />
+          <path d="M250,22 Q250,10 450,10 Q650,10 650,22" fill="none" stroke="rgba(255,180,0,0.35)" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)" />
+          <path d="M350,22 Q350,16 450,16 Q550,16 550,22" fill="none" stroke="rgba(255,180,0,0.25)" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arr)" />
+          <!-- labels -->
+          <text x="305" y="7" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,180,0,0.6)" text-anchor="middle">SKIP 1</text>
+          <text x="368" y="13" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,180,0,0.5)" text-anchor="middle">SKIP 2</text>
+          <text x="425" y="19" font-family="DM Mono,monospace" font-size="7" fill="rgba(255,180,0,0.4)" text-anchor="middle">SKIP 3</text>
+        </svg>
+
+        <!-- Main diagram row -->
+        <div class="unet-row">
+          <!-- Input -->
+          <div class="unet-block input">
+            128×128×4<br><br>FLAIR<br>T1 · T1ce<br>T2
+          </div>
+
+          <!-- ENC L1 -->
+          <div class="unet-block enc skip-src">
+            128×128<br><br>Conv2D×2<br>64 filters<br>+ Dropout<br><small style="opacity:.6">→ MaxPool</small>
+          </div>
+
+          <!-- ENC L2 -->
+          <div class="unet-block enc skip-src">
+            64×64<br><br>Conv2D×2<br>128 filters<br>+ Dropout<br><small style="opacity:.6">→ MaxPool</small>
+          </div>
+
+          <!-- ENC L3 -->
+          <div class="unet-block enc skip-src">
+            32×32<br><br>Conv2D×2<br>256 filters<br>+ Dropout<br><small style="opacity:.6">→ MaxPool</small>
+          </div>
+
+          <!-- Bottleneck -->
+          <div class="unet-block bottle">
+            16×16<br><br>Conv2D×2<br>512 filters<br>+ Dropout 0.2<br><small style="opacity:.6">Peak Depth</small>
+          </div>
+
+          <!-- DEC L3 -->
+          <div class="unet-block dec">
+            32×32<br><br>ConvT<br>256f<br>+ Concat<br>+ Conv×2
+          </div>
+
+          <!-- DEC L2 -->
+          <div class="unet-block dec">
+            64×64<br><br>ConvT<br>128f<br>+ Concat<br>+ Conv×2
+          </div>
+
+          <!-- DEC L1 -->
+          <div class="unet-block dec">
+            128×128<br><br>ConvT<br>64f<br>+ Concat<br>+ Conv×2
+          </div>
+
+          <!-- Output -->
+          <div class="unet-block output">
+            128×128×1<br><br>Conv2D<br>1 filter<br>Sigmoid<br><small style="opacity:.6">Binary Mask</small>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div style="display:flex;gap:20px;margin-top:22px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(0,212,232,.25);display:block"></span>Input</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(124,111,255,.25);display:block"></span>Encoder</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(255,107,107,.25);display:block"></span>Bottleneck</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(0,184,156,.25);display:block"></span>Decoder</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:12px;height:12px;border-radius:3px;background:rgba(74,222,128,.25);display:block"></span>Output</div>
+          <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.68rem;color:var(--muted)"><span style="width:16px;height:2px;background:rgba(255,180,0,.6);border-top:2px dashed rgba(255,180,0,.6);display:block"></span>Skip Connections</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DOC LAYOUT ══ -->
+  <div class="doc-layout">
+
+    <!-- Sticky TOC -->
+    <nav class="toc" aria-label="On this page">
+      <div class="toc-title">ON THIS PAGE</div>
+      <ul class="toc-list" id="toc-list">
+        <li><a href="#sec-input"   class="active"><span class="toc-dot" style="background:var(--col-input)"></span>Input Pipeline</a></li>
+        <li><a href="#sec-encoder"><span class="toc-dot" style="background:var(--col-encoder)"></span>Encoder Path</a></li>
+        <li><a href="#sec-bottle"> <span class="toc-dot" style="background:var(--col-bottle)"></span>Bottleneck</a></li>
+        <li><a href="#sec-skip">   <span class="toc-dot" style="background:var(--col-skip)"></span>Skip Connections</a></li>
+        <li><a href="#sec-decoder"><span class="toc-dot" style="background:var(--col-decoder)"></span>Decoder Path</a></li>
+        <li><a href="#sec-output"> <span class="toc-dot" style="background:var(--col-output)"></span>Output &amp; Loss</a></li>
+        <li><a href="#sec-training"><span class="toc-dot" style="background:#a78bff"></span>Training Config</a></li>
+      </ul>
+    </nav>
+
+    <!-- Doc sections -->
+    <div class="doc-sections">
+
+      <!-- ── 1. INPUT PIPELINE ── -->
+      <div class="doc-section reveal" id="sec-input">
+        <div class="sec-label" style="color:var(--col-input)">01 — INPUT PIPELINE</div>
+        <h2 class="sec-title">Multi-Modal MRI Fusion</h2>
+        <div class="sec-body">
+          <p>Each training sample is a single 2D axial slice drawn from a 3D BraTS 2020 volume. Rather than processing a grayscale image, the model receives a <strong>4-channel tensor of shape (128, 128, 4)</strong> where each channel carries a distinct MRI modality, stacked depth-wise like an RGB image with an extra fourth channel.</p>
+          <p>Before stacking, every modality undergoes <strong>volume-wise Z-score normalization</strong> — the mean and standard deviation of all non-zero (brain-tissue) voxels are computed per 3D volume, and each voxel is rescaled to <code>(v − μ) / (σ + ε)</code>. This removes scanner-specific intensity bias while preserving inter-tissue contrast, which is critical for cross-site BraTS data.</p>
+        </div>
+
+        <!-- Modality cards -->
+        <div class="modality-grid">
+          <div class="modality-card">
+            <div class="mod-icon">🌊</div>
+            <div class="mod-name" style="color:var(--cyan)">FLAIR</div>
+            <div class="mod-desc">Suppresses CSF signal. Best for visualising oedema and the infiltrative tumour boundary.</div>
+            <span class="mod-channel tag-cyan" style="background:rgba(0,212,232,.1);border:1px solid rgba(0,212,232,.2);color:var(--cyan);padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:.66rem;">CH 0</span>
+          </div>
+          <div class="modality-card">
+            <div class="mod-icon">🩶</div>
+            <div class="mod-name" style="color:#a78bff">T1</div>
+            <div class="mod-desc">Baseline anatomical reference. Provides clear grey/white matter differentiation and overall brain morphology.</div>
+            <span class="mod-channel" style="background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);color:#a78bff;padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:.66rem;">CH 1</span>
+          </div>
+          <div class="modality-card">
+            <div class="mod-icon">🔴</div>
+            <div class="mod-name" style="color:#ff6b6b">T1ce</div>
+            <div class="mod-desc">Post-gadolinium contrast. Highlights active tumour core and blood-brain barrier breakdown — the most diagnostically significant channel.</div>
+            <span class="mod-channel" style="background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:#ff6b6b;padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:.66rem;">CH 2</span>
+          </div>
+          <div class="modality-card">
+            <div class="mod-icon">🔵</div>
+            <div class="mod-name" style="color:var(--teal)">T2</div>
+            <div class="mod-desc">Sensitive to fluid and inflammation. Complements FLAIR for delineating the full lesion extent including peritumoral oedema.</div>
+            <span class="mod-channel" style="background:rgba(0,184,156,.1);border:1px solid rgba(0,184,156,.2);color:var(--teal);padding:3px 9px;border-radius:100px;font-family:var(--font-mono);font-size:.66rem;">CH 3</span>
+          </div>
+        </div>
+
+        <!-- Stacking visual -->
+        <div style="margin-top:24px;padding:22px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:var(--radius);">
+          <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.08em;margin-bottom:14px;">TENSOR CONSTRUCTION</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:var(--font-mono);font-size:.78rem;padding:8px 14px;border-radius:8px;background:rgba(0,212,232,.1);border:1px solid rgba(0,212,232,.2);color:var(--cyan)">FLAIR [128,128]</span>
+            <span style="color:var(--muted)">+</span>
+            <span style="font-family:var(--font-mono);font-size:.78rem;padding:8px 14px;border-radius:8px;background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);color:#a78bff">T1 [128,128]</span>
+            <span style="color:var(--muted)">+</span>
+            <span style="font-family:var(--font-mono);font-size:.78rem;padding:8px 14px;border-radius:8px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.2);color:#ff6b6b">T1ce [128,128]</span>
+            <span style="color:var(--muted)">+</span>
+            <span style="font-family:var(--font-mono);font-size:.78rem;padding:8px 14px;border-radius:8px;background:rgba(0,184,156,.1);border:1px solid rgba(0,184,156,.2);color:var(--teal)">T2 [128,128]</span>
+            <span style="color:var(--muted);font-size:1.3rem">→</span>
+            <span style="font-family:var(--font-mono);font-size:.85rem;padding:9px 16px;border-radius:8px;background:linear-gradient(135deg,rgba(0,212,232,.15),rgba(0,184,156,.15));border:1px solid var(--border-s);color:var(--white);font-weight:600">Input (128, 128, 4)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. ENCODER ── -->
+      <div class="doc-section reveal" id="sec-encoder">
+        <div class="sec-label" style="color:var(--col-encoder)">02 — CONTRACTING PATH</div>
+        <h2 class="sec-title">The Encoder</h2>
+        <div class="sec-body">
+          <p>The encoder is the feature-extraction half of the U. It progressively <strong>compresses spatial resolution while expanding filter depth</strong>, forcing the network to learn increasingly abstract representations of tumor morphology. Each encoding level consists of two <code>Conv2D</code> layers with <code>relu</code> activation and <code>he_normal</code> kernel initialization, followed by <code>Dropout</code> for regularization and a <code>MaxPooling2D</code> layer that halves spatial dimensions.</p>
+          <p><strong>He Normal initialization</strong> is specifically suited for ReLU activations — it maintains the variance of activations across layers, avoiding vanishing or exploding gradients during training on the relatively small BraTS dataset.</p>
+        </div>
+
+        <!-- Depth visual -->
+        <div class="depth-visual">
+          <div class="depth-level">
+            <div class="depth-level-num">LEVEL 1</div>
+            <div class="depth-bar" style="height:32px;"></div>
+            <div class="depth-res" style="color:var(--col-encoder)">128×128</div>
+            <div class="depth-filters">64 filters</div>
+            <div class="depth-drop">Dropout 0.1</div>
+          </div>
+          <div style="color:var(--muted);font-size:1rem;padding-bottom:20px;">↓ Pool</div>
+          <div class="depth-level">
+            <div class="depth-level-num">LEVEL 2</div>
+            <div class="depth-bar" style="height:52px;"></div>
+            <div class="depth-res" style="color:var(--col-encoder)">64×64</div>
+            <div class="depth-filters">128 filters</div>
+            <div class="depth-drop">Dropout 0.1</div>
+          </div>
+          <div style="color:var(--muted);font-size:1rem;padding-bottom:20px;">↓ Pool</div>
+          <div class="depth-level">
+            <div class="depth-level-num">LEVEL 3</div>
+            <div class="depth-bar" style="height:72px;"></div>
+            <div class="depth-res" style="color:var(--col-encoder)">32×32</div>
+            <div class="depth-filters">256 filters</div>
+            <div class="depth-drop">Dropout 0.2</div>
+          </div>
+          <div style="color:var(--muted);font-size:1rem;padding-bottom:20px;">↓ Pool</div>
+          <div class="depth-level" style="border-color:rgba(255,107,107,.3);">
+            <div class="depth-level-num" style="color:#ff6b6b">BOTTLENECK</div>
+            <div class="depth-bar" style="height:92px;background:linear-gradient(180deg,var(--col-bottle),rgba(255,107,107,.3));"></div>
+            <div class="depth-res" style="color:var(--col-bottle)">16×16</div>
+            <div class="depth-filters">512 filters</div>
+            <div class="depth-drop" style="border-color:rgba(255,107,107,.3);color:#ff6b6b">Dropout 0.2</div>
+          </div>
+        </div>
+
+        <div class="cards-grid cols-2" style="margin-top:28px;">
+          <div class="card">
+            <div class="card-num" style="color:var(--col-encoder)">CONV BLOCK STRUCTURE</div>
+            <div class="card-title">Per-Level Operation</div>
+            <div class="card-body">
+              Each encoder level applies: <code>Conv2D(filters, 3×3, relu, he_normal)</code> → <code>Dropout(0.1)</code> → <code>Conv2D(filters, 3×3, relu, he_normal)</code> → <code>MaxPooling2D(2×2)</code>. The <strong>same-padding</strong> ensures spatial dimensions are only reduced by the pooling step, not the convolutions.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-num" style="color:var(--col-encoder)">WHY MAXPOOLING</div>
+            <div class="card-title">Spatial Compression Strategy</div>
+            <div class="card-body">
+              <code>MaxPooling2D(2×2)</code> halves the spatial dimensions at each level (128→64→32→16), creating a 4-level pyramid. This forces the network to build spatially invariant feature representations, while progressively doubling filter count captures richer feature combinations at each scale.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 3. BOTTLENECK ── -->
+      <div class="doc-section reveal" id="sec-bottle">
+        <div class="sec-label" style="color:var(--col-bottle)">03 — BOTTLENECK</div>
+        <h2 class="sec-title">Abstract Feature Compression</h2>
+        <div class="sec-body">
+          <p>The bottleneck sits at the bottom of the U at <strong>16×16 spatial resolution</strong> with 512 feature maps — the densest information point in the network. No pooling occurs here. Two consecutive <code>Conv2D(512)</code> layers with <code>Dropout(0.2)</code> process the encoded representation before it begins its upward journey through the decoder.</p>
+          <p>At this compressed scale, each spatial location has a large <strong>receptive field</strong> that spans the majority of the 128×128 input. This allows the bottleneck to reason about global context — the overall shape and location of tumor mass — before the decoder reconstructs the fine-grained pixel-level boundary. The higher dropout rate (0.2 vs 0.1 in encoder levels) acts as stronger regularization at the point of maximum abstraction.</p>
+        </div>
+
+        <div style="margin-top:24px;padding:24px;background:rgba(255,107,107,.05);border:1px solid rgba(255,107,107,.2);border-radius:var(--radius);">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:52px;height:52px;border-radius:12px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🔥</div>
+            <div>
+              <div style="font-family:var(--font-head);font-weight:700;font-size:1rem;margin-bottom:5px">Peak Receptive Field</div>
+              <div style="font-size:.84rem;color:var(--muted);line-height:1.65">At 16×16, each neuron in the bottleneck has a theoretical receptive field covering the <strong style="color:var(--white)">entire 128×128 input</strong>, enabling global reasoning about lesion position, shape, and surrounding anatomy — information the decoder will use to guide precise boundary reconstruction.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 4. SKIP CONNECTIONS ── -->
+      <div class="doc-section reveal" id="sec-skip">
+        <div class="sec-label" style="color:var(--col-skip)">04 — SKIP CONNECTIONS</div>
+        <h2 class="sec-title">Preserving Spatial Precision</h2>
+        <div class="sec-body">
+          <p>Skip connections are the defining innovation of U-Net and the primary reason it outperforms standard encoder-decoder networks for medical image segmentation. During encoding, MaxPooling progressively discards spatial detail — fine edges, vessel boundaries, and the millimetre-scale tumor margins that radiologists rely on clinically.</p>
+          <p>Skip connections <strong>bypass the bottleneck entirely</strong>: the feature maps produced at each encoder level (before pooling) are stored and later concatenated channel-wise with the corresponding decoder level's upsampled output. This gives the decoder direct access to both the <strong>high-resolution spatial detail</strong> from the encoder and the <strong>deep semantic context</strong> from the bottleneck simultaneously.</p>
+        </div>
+
+        <div class="skip-explainer">
+          <div class="skip-header">
+            <div class="skip-icon-wrap">🔗</div>
+            <div>
+              <div class="skip-title">Concatenation Mechanism</div>
+              <div class="skip-subtitle">How encoder feature maps are merged into the decoder</div>
+            </div>
+          </div>
+          <div class="skip-body">
+            At each decoder level, a <code style="font-family:var(--font-mono);font-size:.82rem;background:rgba(255,180,0,.1);color:#ffb400;padding:2px 7px;border-radius:4px;">Conv2DTranspose</code> doubles the spatial resolution of the decoder tensor. The result is then <strong>concatenated along the channel axis</strong> with the encoder feature map from the matching spatial level. The merged tensor (with double the channels) is then processed by two <code style="font-family:var(--font-mono);font-size:.82rem;background:rgba(255,180,0,.1);color:#ffb400;padding:2px 7px;border-radius:4px;">Conv2D</code> layers that learn to fuse semantic and spatial information.
+          </div>
+          <div class="skip-flow">
+            <div class="skip-box enc-box">Encoder L1<br><small style="opacity:.7">128×128, 64ch</small></div>
+            <div class="skip-arrow">──────────────────────────────→</div>
+            <div class="skip-box cat-box">Concatenate<br><small style="opacity:.7">128×128, 128ch</small></div>
+            <div class="skip-arrow">→</div>
+            <div class="skip-box dec-box">Dec Conv×2<br><small style="opacity:.7">128×128, 64ch</small></div>
+          </div>
+          <div class="skip-flow" style="margin-top:10px">
+            <div style="width:100%;text-align:center;font-size:.75rem;color:var(--muted);font-family:var(--font-mono)">
+              ↑ ConvTranspose2D output (64ch) + Encoder skip (64ch) = 128ch merged tensor
+            </div>
+          </div>
+        </div>
+
+        <div class="cards-grid cols-3" style="margin-top:24px;">
+          <div class="card">
+            <div class="card-num" style="color:var(--col-skip)">PROBLEM SOLVED</div>
+            <div class="card-title">Gradient Flow</div>
+            <div class="card-body">Skip connections create direct gradient pathways from the loss to early encoder layers, mitigating the vanishing gradient problem and enabling effective end-to-end training even with many layers.</div>
+          </div>
+          <div class="card">
+            <div class="card-num" style="color:var(--col-skip)">MEDICAL RELEVANCE</div>
+            <div class="card-title">Boundary Precision</div>
+            <div class="card-body">Tumor boundaries in MRI are often only a few pixels wide. Without skip connections, the decoder can only place tumors approximately. Skip connections restore the sub-pixel detail needed for clinical-grade delineation.</div>
+          </div>
+          <div class="card">
+            <div class="card-num" style="color:var(--col-skip)">INFORMATION THEORY</div>
+            <div class="card-title">Multi-Scale Fusion</div>
+            <div class="card-body">By merging features at 3 different resolutions (128×128, 64×64, 32×32), the final output integrates texture, shape, and location cues simultaneously — mimicking how a radiologist cross-references multiple scales of detail.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 5. DECODER ── -->
+      <div class="doc-section reveal" id="sec-decoder">
+        <div class="sec-label" style="color:var(--col-decoder)">05 — EXPANSIVE PATH</div>
+        <h2 class="sec-title">The Decoder</h2>
+        <div class="sec-body">
+          <p>The decoder mirrors the encoder in structure, progressively <strong>expanding spatial resolution back to 128×128</strong> while halving filter depth. At each of the three decoder levels, a transposed convolution upsamples the current feature map, a skip connection concatenates the corresponding encoder features, and two standard convolutions refine the merged representation.</p>
+          <p>Unlike the encoder which uses MaxPooling for downsampling, the decoder uses <strong>learned upsampling via <code>Conv2DTranspose</code></strong>. This is preferable to bilinear upsampling because the upsampling weights are trained jointly with the rest of the network, allowing the decoder to learn task-specific spatial reconstruction patterns rather than relying on a fixed interpolation kernel.</p>
+        </div>
+
+        <div class="cards-grid cols-3" style="margin-top:24px;">
+          <div class="card" style="border-top:2px solid rgba(0,184,156,.5)">
+            <div class="card-num" style="color:var(--col-decoder)">DECODER L3</div>
+            <div class="card-title">32 × 32 Resolution</div>
+            <div class="card-body">
+              <code>Conv2DTranspose(256, 2×2, strides=2)</code> upsamples from 16×16. Concatenated with Encoder L3 skip. Two <code>Conv2D(256)</code> layers refine the merged 512-channel tensor back to 256 channels.
+            </div>
+          </div>
+          <div class="card" style="border-top:2px solid rgba(0,184,156,.5)">
+            <div class="card-num" style="color:var(--col-decoder)">DECODER L2</div>
+            <div class="card-title">64 × 64 Resolution</div>
+            <div class="card-body">
+              <code>Conv2DTranspose(128, 2×2, strides=2)</code> upsamples from 32×32. Concatenated with Encoder L2 skip. Two <code>Conv2D(128)</code> layers integrate coarse semantics with mid-level spatial structure.
+            </div>
+          </div>
+          <div class="card" style="border-top:2px solid rgba(0,184,156,.5)">
+            <div class="card-num" style="color:var(--col-decoder)">DECODER L1</div>
+            <div class="card-title">128 × 128 Resolution</div>
+            <div class="card-body">
+              <code>Conv2DTranspose(64, 2×2, strides=2)</code> restores full resolution. Concatenated with Encoder L1 skip — the highest-fidelity spatial features. Final <code>Conv2D(64)</code> layers prepare the feature map for the output head.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 6. OUTPUT & LOSS ── -->
+      <div class="doc-section reveal" id="sec-output">
+        <div class="sec-label" style="color:var(--col-output)">06 — OUTPUT &amp; LOSS STRATEGY</div>
+        <h2 class="sec-title">Binary Mask &amp; Hybrid Loss</h2>
+        <div class="sec-body">
+          <p>The final layer is a <code>Conv2D(1, kernel_size=1, activation='sigmoid')</code> that projects the 64-channel decoder output into a <strong>single-channel probability map of shape (128, 128, 1)</strong>. Each pixel value represents the model's probability that the pixel belongs to tumor tissue. A threshold of 0.5 converts this into a hard binary mask at inference time.</p>
+          <p>The model is optimized with a <strong>Hybrid Loss</strong> combining Binary Cross-Entropy and Dice Loss at equal 0.5 weighting. This combination is standard practice in medical segmentation because the two losses address fundamentally different failure modes of pure single-loss training.</p>
+        </div>
+
+        <div class="loss-grid">
+          <div class="loss-card bce">
+            <div class="loss-icon">📊</div>
+            <div class="loss-name">Binary Cross-Entropy</div>
+            <div class="loss-formula">
+              BCE = −(y·log(ŷ)<br>+ (1−y)·log(1−ŷ))
+            </div>
+            <div class="loss-desc">Operates <strong>pixel-by-pixel</strong>. Penalises individual pixel misclassifications strongly, ensuring the model learns precise local boundaries. However, in highly imbalanced datasets where tumor pixels are rare, BCE alone can be dominated by the large mass of background pixels, causing the model to predict all-black masks.</div>
+          </div>
+
+          <div class="loss-card dice">
+            <div class="loss-icon">🎯</div>
+            <div class="loss-name">Dice Loss</div>
+            <div class="loss-formula">
+              Dice = 1 − (2·|A∩B| + ε)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/ (|A| + |B| + ε)
+            </div>
+            <div class="loss-desc">Operates on the <strong>full prediction mask</strong> as a set overlap metric. Directly optimises the Dice coefficient — the standard BraTS evaluation metric — and is naturally robust to class imbalance because it measures fractional overlap rather than pixel-wise accuracy. The smoothing term ε prevents division by zero on empty slices.</div>
+          </div>
+
+          <div class="loss-card hybrid">
+            <div class="loss-icon">⚡</div>
+            <div class="loss-name">Hybrid Loss</div>
+            <div class="loss-formula">
+              L = 0.5 × BCE<br>
+              &nbsp;&nbsp;&nbsp;+ 0.5 × (1 − Dice)
+            </div>
+            <div class="loss-desc">The <strong>equal-weight combination</strong> provides pixel-precise boundary supervision from BCE while Dice Loss prevents class-imbalance collapse and directly maximises the evaluation metric. Together they produce sharper boundaries than Dice alone while maintaining better recall on small tumor regions than BCE alone. Adam at <code>lr=1e-4</code> provides stable, adaptive convergence.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 7. TRAINING CONFIG ── -->
+      <div class="doc-section reveal" id="sec-training">
+        <div class="sec-label" style="color:#a78bff">07 — TRAINING CONFIGURATION</div>
+        <h2 class="sec-title">Optimization Setup</h2>
+        <div class="sec-body">
+          <p>The model was trained end-to-end on BraTS 2020 2D axial slices. Only slices containing at least one positive tumor pixel were included in training to reduce the prevalence of purely negative examples and focus learning on informative samples.</p>
+        </div>
+
+        <div class="config-grid">
+          <div class="config-card">
+            <div class="config-title">OPTIMIZER &amp; SCHEDULE</div>
+            <div class="config-rows">
+              <div class="config-row"><span class="config-key">Optimizer</span><span class="config-val" style="color:var(--cyan)">Adam</span></div>
+              <div class="config-row"><span class="config-key">Learning Rate</span><span class="config-val" style="color:var(--cyan)">1e-4</span></div>
+              <div class="config-row"><span class="config-key">β₁ / β₂</span><span class="config-val">0.9 / 0.999</span></div>
+              <div class="config-row"><span class="config-key">ε (epsilon)</span><span class="config-val">1e-7</span></div>
+              <div class="config-row"><span class="config-key">Checkpoint</span><span class="config-val" style="color:var(--teal)">Best Val Dice</span></div>
+            </div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">MODEL I/O &amp; REGULARISATION</div>
+            <div class="config-rows">
+              <div class="config-row"><span class="config-key">Input Shape</span><span class="config-val" style="color:var(--cyan)">(128, 128, 4)</span></div>
+              <div class="config-row"><span class="config-key">Output Shape</span><span class="config-val" style="color:#4ade80">(128, 128, 1)</span></div>
+              <div class="config-row"><span class="config-key">Threshold</span><span class="config-val">0.5</span></div>
+              <div class="config-row"><span class="config-key">Kernel Init</span><span class="config-val" style="color:#a78bff">He Normal</span></div>
+              <div class="config-row"><span class="config-key">Dropout</span><span class="config-val">0.1 enc · 0.2 bottle</span></div>
+            </div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">LOSS FUNCTIONS</div>
+            <div class="config-rows">
+              <div class="config-row"><span class="config-key">Primary Loss</span><span class="config-val" style="color:#ffb400">Hybrid (BCE+Dice)</span></div>
+              <div class="config-row"><span class="config-key">BCE Weight</span><span class="config-val">0.5</span></div>
+              <div class="config-row"><span class="config-key">Dice Weight</span><span class="config-val">0.5</span></div>
+              <div class="config-row"><span class="config-key">Dice Smooth</span><span class="config-val">1.0</span></div>
+              <div class="config-row"><span class="config-key">Metric</span><span class="config-val" style="color:var(--teal)">Dice Coefficient</span></div>
+            </div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">DATA &amp; PREPROCESSING</div>
+            <div class="config-rows">
+              <div class="config-row"><span class="config-key">Dataset</span><span class="config-val" style="color:#a78bff">BraTS 2020</span></div>
+              <div class="config-row"><span class="config-key">Modalities</span><span class="config-val">FLAIR·T1·T1ce·T2</span></div>
+              <div class="config-row"><span class="config-key">Normalization</span><span class="config-val" style="color:var(--cyan)">Z-Score per Volume</span></div>
+              <div class="config-row"><span class="config-key">Slice Filter</span><span class="config-val" style="color:var(--teal)">Tumor-positive only</span></div>
+              <div class="config-row"><span class="config-key">Resize</span><span class="config-val">cv2.INTER_AREA</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /doc-sections -->
+  </div><!-- /doc-layout -->
+
+  <!-- ══ CTA BANNER ══ -->
+  <div class="cta-banner">
+    <div class="cta-inner reveal">
+      <div>
+        <div class="cta-text-head">Ready to see it in action?</div>
+        <p class="cta-text-sub">Load a demo BraTS patient or upload your own multi-modal MRI ZIP archive into the interactive segmentation viewer to explore the U-Net predictions slice by slice.</p>
+      </div>
+      <div class="cta-actions">
+        <a href="/segmentation" class="btn-primary">🔬 Open Segmentation Viewer</a>
+        <a href="/diagnostics" class="btn-ghost">Run Classification →</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /site-wrap -->
+
+<script>
+/* ── Neural mesh canvas ── */
+(function () {
+  const canvas = document.getElementById('neural-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [];
+  const N = 60, MAX_D = 155, SPD = 0.2;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  function init() {
+    nodes = [];
+    for (let i = 0; i < N; i++)
+      nodes.push({ x: Math.random()*W, y: Math.random()*H, vx:(Math.random()-.5)*SPD, vy:(Math.random()-.5)*SPD, r:Math.random()*2+1 });
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    nodes.forEach(n => { n.x+=n.vx; n.y+=n.vy; if(n.x<0||n.x>W)n.vx*=-1; if(n.y<0||n.y>H)n.vy*=-1; });
+    for (let i=0;i<nodes.length;i++)
+      for (let j=i+1;j<nodes.length;j++) {
+        const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy);
+        if(d<MAX_D){ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.strokeStyle=`rgba(0,212,232,${(1-d/MAX_D)*.38})`;ctx.lineWidth=.6;ctx.stroke();}
+      }
+    nodes.forEach(n=>{ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle='rgba(0,212,232,.42)';ctx.fill();});
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', ()=>{resize();init();});
+  resize(); init(); draw();
+})();
+
+/* ── Nav shrink ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 40);
+});
+
+/* ── Scroll reveal ── */
+(function () {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+})();
+
+/* ── Active TOC highlight on scroll ── */
+(function () {
+  const sections = document.querySelectorAll('.doc-section');
+  const tocLinks = document.querySelectorAll('.toc-list a');
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id;
+        tocLinks.forEach(a => {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => obs.observe(s));
+})();
+</script>
+
+</body>
+</html>
