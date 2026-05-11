@@ -1,10 +1,6 @@
 flask>=3.0.0
-<<<<<<< HEAD
-tensorflow-cpu==2.13.0
-=======
 tensorflow>=2.13.0
 keras>=3.0.0
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 Pillow>=10.0.0
 numpy>=1.24.0
 gunicorn>=21.0.0
@@ -12,9 +8,5 @@ python-dotenv>=1.0.0
 fastapi
 uvicorn[standard]
 nibabel
-<<<<<<< HEAD
-scikit-learn
-=======
 scikit-learn
 opencv-python-headless
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9

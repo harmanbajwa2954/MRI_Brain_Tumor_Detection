@@ -22,35 +22,13 @@ import nibabel as nib
 
 
 # ---------------Segmentation Model-------------------------
-<<<<<<< HEAD
-
-=======
 @tf.keras.utils.register_keras_serializable()
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 def dice_coef(y_true, y_pred, smooth=1.0):
     y_true_f = K.flatten(y_true)
     y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
     return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
-<<<<<<< HEAD
-
-def dice_loss(y_true, y_pred):
-    return 1.0 - dice_coef(y_true, y_pred)
-
-
-def hybrid_loss(y_true, y_pred):
-    return tf.keras.losses.binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
-
-
-# Load the segmentation model
-segmentation_model = load_model('models/unet_brats_best.keras', custom_objects={
-    'hybrid_loss': hybrid_loss,
-    'dice_coef': dice_coef,
-    'dice_loss': dice_loss
-})
-
-=======
 @tf.keras.utils.register_keras_serializable()
 def dice_loss(y_true, y_pred):
     return 1.0 - dice_coef(y_true, y_pred)
@@ -66,7 +44,6 @@ def get_segmentation_model():
         print("Loading segmentation model for the first time...")
         segmentation_model = load_model('models/unet_brats_best.keras')
     return segmentation_model
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 
 # --------------Classification model---------------------
 MODEL_ARCH = 'efficientnet'
@@ -159,12 +136,8 @@ def generate_xai_image(img_path):
 
 
 # -------------------------Load model---------------------
-<<<<<<< HEAD
-MODEL_PATH = 'models/BT_EfB0_model.keras'
-=======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', 'BT_EfB0_model.keras')
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 try:
     model = load_model(MODEL_PATH)
     print(f'[OK] Model loaded from {MODEL_PATH}')
@@ -312,12 +285,8 @@ def segment_demo():
         volume_stack = np.load('demo_patient.npy')
 
         # 2. Run Inference
-<<<<<<< HEAD
-        predictions = segmentation_model.predict(volume_stack, batch_size=16)
-=======
         segmodel = get_segmentation_model()
         predictions = segmodel.predict(volume_stack, batch_size=2)
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 
         # 3. Package for Frontend
         response_data = []
@@ -401,12 +370,8 @@ def segment_upload():
                 volume_stack[i, :, :, 3] = cv2.resize(vol_t2[:, :, i], (128, 128), interpolation=cv2.INTER_AREA)
 
             # 5. Run Inference
-<<<<<<< HEAD
-            predictions = segmentation_model.predict(volume_stack, batch_size=2)
-=======
             segmodel = get_segmentation_model()
             predictions = segmodel.predict(volume_stack, batch_size=2)
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
 
             # 6. Package Data
             response_data = []
@@ -424,11 +389,7 @@ def segment_upload():
                         "mri_image": f"data:image/png;base64,{array_to_base64(base_mri, is_mask=False)}",
                         "mask_image": f"data:image/png;base64,{array_to_base64(pred_mask, is_mask=True)}",
                         "overlay_image": f"data:image/png;base64,{generate_overlay_image(base_mri, pred_mask)}",
-<<<<<<< HEAD
-                        "tumor_detected": bool(tumor_pixels > 50),
-=======
                         "tumor_detected": bool(tumor_pixels > 5),
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
                         "tumor_pixels": int(tumor_pixels)
                     })
 
@@ -444,13 +405,14 @@ def segmentation_page():
     # Renders the UI from the templates folder
     return render_template('segmentation.html')
 
-<<<<<<< HEAD
-=======
 @app.route('/unet_architecture', methods=['GET'])
 def unet_architecture():
     return render_template('unet_architecture.html')
 
->>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
+@app.route('/classification_architecture', methods=['GET'])
+def classification_architecture():
+    return render_template('classification_architecture.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
