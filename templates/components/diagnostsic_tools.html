@@ -6,6 +6,10 @@
             Neuro<span class="accent">Scan</span> AI
         </div>
         <ul class="nav-links">
+<<<<<<< HEAD
+=======
+            <li><a href="/segmentation">Segmentation</a></li>
+>>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
             <li><a href="/" class="nav-cta">← Back to Home</a></li>
         </ul>
     </div>
@@ -171,7 +175,11 @@
                     </div>
 
                     <!-- Download Report -->
+<<<<<<< HEAD
                     <button class="download-report-btn" id="download-report-btn">
+=======
+                    <button class="download-report-btn" id="download-report-btn" onclick="downloadReport()">
+>>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
                         <span>📄</span> Download Report (PDF)
                     </button>
                 </div>
@@ -273,8 +281,256 @@
         });
 
         /* ── Download Report (print-to-PDF) ── */
+<<<<<<< HEAD
         document.getElementById("download-report-btn")?.addEventListener("click", function () {
             window.print();
         });
+=======
+
+function downloadReport() {
+
+    const tumorType =
+        document.querySelector('.tumor-type')?.innerText || 'Unknown';
+
+    const confidence =
+        document.querySelector('.conf-pct')?.innerText || 'N/A';
+
+    const description =
+        document.querySelector('.result-desc')?.innerText || '';
+
+    const uploadedImage =
+        document.querySelector('.result-img img')?.src || '';
+
+    const heatmapImage =
+        document.querySelector('.xai-img img')?.src || '';
+
+    const today = new Date().toLocaleString();
+
+    // collect class probabilities
+    let probabilityRows = '';
+
+    document.querySelectorAll('.class-row').forEach(row => {
+
+        const name =
+            row.querySelector('.class-name')?.innerText || '';
+
+        const prob =
+            row.querySelector('.class-pct')?.innerText || '';
+
+        probabilityRows += `
+            <tr>
+                <td>${name}</td>
+                <td>${prob}</td>
+            </tr>
+        `;
+    });
+
+    const reportWindow = window.open('', '_blank');
+
+    reportWindow.document.write(`
+    <html>
+    <head>
+        <title>NeuroScan AI Report</title>
+
+        <style>
+
+            body{
+                font-family:Arial,sans-serif;
+                padding:40px;
+                color:#111;
+                background:#fff;
+            }
+
+            .header{
+                border-bottom:2px solid #111;
+                padding-bottom:15px;
+                margin-bottom:30px;
+            }
+
+            .title{
+                font-size:32px;
+                font-weight:700;
+            }
+
+            .subtitle{
+                color:#666;
+                margin-top:4px;
+            }
+
+            .section{
+                margin-top:30px;
+            }
+
+            .label{
+                font-size:18px;
+                font-weight:700;
+                margin-bottom:12px;
+            }
+
+            .result-box{
+                padding:20px;
+                border:1px solid #ddd;
+                border-radius:10px;
+                background:#fafafa;
+            }
+
+            .tumor{
+                font-size:28px;
+                font-weight:700;
+                margin-bottom:10px;
+            }
+
+            .confidence{
+                font-size:18px;
+                margin-bottom:10px;
+            }
+
+            img{
+                max-width:320px;
+                border-radius:12px;
+                border:1px solid #ccc;
+            }
+
+            .img-grid{
+                display:flex;
+                gap:30px;
+                flex-wrap:wrap;
+                margin-top:20px;
+            }
+
+            table{
+                width:100%;
+                border-collapse:collapse;
+                margin-top:15px;
+            }
+
+            th,td{
+                border:1px solid #ccc;
+                padding:10px;
+                text-align:left;
+            }
+
+            th{
+                background:#f1f1f1;
+            }
+
+            .footer{
+                margin-top:40px;
+                font-size:13px;
+                color:#666;
+                border-top:1px solid #ccc;
+                padding-top:15px;
+            }
+
+        </style>
+    </head>
+
+    <body>
+
+        <div class="header">
+            <div class="title">NeuroScan AI</div>
+            <div class="subtitle">
+                AI-Powered Brain Tumor Classification Report
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="result-box">
+
+                <div class="tumor">
+                    Diagnosis: ${tumorType}
+                </div>
+
+                <div class="confidence">
+                    Model Confidence: ${confidence}
+                </div>
+
+                <div>
+                    ${description}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="section">
+
+            <div class="label">
+                MRI Analysis
+            </div>
+
+            <div class="img-grid">
+
+                <div>
+                    <h4>Uploaded MRI</h4>
+                    <img src="{{ result.image_url }}">
+                </div>
+
+                <div>
+                    <h4>EigenCAM Heatmap</h4>
+                    <img src="data:image/png;base64,{{ result.heatmap }}">
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="label">
+                Class Probabilities
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Probability</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${probabilityRows}
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="section">
+
+            <div class="label">
+                AI System Information
+            </div>
+
+            <ul>
+                <li>Model: EfficientNetB0 Transfer Learning</li>
+                <li>Framework: TensorFlow / Keras</li>
+                <li>Inference Engine: Flask</li>
+                <li>Explainable AI: EigenCAM</li>
+                <li>Generated On: ${today}</li>
+            </ul>
+
+        </div>
+
+        <div class="footer">
+            WARNING: This report is AI-generated and intended for research
+            and educational purposes only. Clinical decisions must always
+            be verified by a qualified radiologist or medical professional.
+        </div>
+
+    </body>
+    </html>
+    `);
+
+    reportWindow.document.close();
+
+    reportWindow.focus();
+
+    setTimeout(() => {
+        reportWindow.print();
+    }, 500);
+}
+
+        
+>>>>>>> 608af0341ad364e2d1566c4ae133e2ff63ecbbe9
     </script>
 </section>

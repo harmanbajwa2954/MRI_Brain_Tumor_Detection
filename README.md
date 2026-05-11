@@ -10,8 +10,6 @@ pinned: false
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
 # 🧠 NeuroScan AI — Brain Tumor Classification
 
->**Live Link 🔗** : [NeuroScan.AI](https://harmanbajwa-neurascan-ai.hf.space) 
-
 > VGG16 Transfer Learning · Flask · MRI Classification · 4-Class Detection
 
 ---
