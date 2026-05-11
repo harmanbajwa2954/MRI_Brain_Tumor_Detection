@@ -450,12 +450,12 @@ function downloadReport() {
 
                 <div>
                     <h4>Uploaded MRI</h4>
-                    <img src="${uploadedImage}">
+                    <img src="{{ result.image_url }}">
                 </div>
 
                 <div>
                     <h4>EigenCAM Heatmap</h4>
-                    <img src="${heatmapImage}">
+                    <img src="data:image/png;base64,{{ result.heatmap }}">
                 </div>
 
             </div>
